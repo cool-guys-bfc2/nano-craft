@@ -3,34 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>NanoCraft 0.6 Mobile</title>
+    <title>NanoCraft 0.7 Stabilized</title>
     <style>
         body { margin: 0; overflow: hidden; background: #87CEEB; font-family: 'Courier New', monospace; user-select: none; -webkit-user-select: none; }
         #hud { position: absolute; top: 10px; left: 10px; color: white; text-shadow: 2px 2px 0 #000; pointer-events: none; z-index: 10; }
         #crosshair { position: absolute; top: 50%; left: 50%; width: 20px; height: 20px; border: 2px solid white; transform: translate(-50%, -50%); border-radius: 50%; pointer-events: none; z-index: 10; mix-blend-mode: difference; }
         
-        /* --- INVENTORY BAR (Center Bottom) --- */
+        /* --- INVENTORY --- */
         #inventory {
             position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
-            display: flex; gap: 5px; background: rgba(0,0,0,0.6); padding: 5px; border-radius: 12px;
+            display: flex; gap: 6px; background: rgba(0,0,0,0.6); padding: 6px; border-radius: 12px;
             pointer-events: auto; z-index: 40;
         }
         .inv-slot {
-            width: 40px; height: 40px; border: 2px solid #555; border-radius: 6px;
+            width: 42px; height: 42px; border: 2px solid #555; border-radius: 6px;
             cursor: pointer; position: relative; background-size: cover; image-rendering: pixelated;
         }
         .inv-slot.selected { border-color: white; box-shadow: 0 0 8px white; transform: scale(1.1); z-index: 41; }
         .slot-num { position: absolute; top: 0; left: 2px; color: white; font-size: 10px; font-weight: bold; text-shadow: 1px 1px 0 #000; }
 
-        /* --- CONTROLS LAYER --- */
-        .control-layer { position: absolute; bottom: 60px; width: 100%; height: 160px; pointer-events: none; z-index: 20; }
+        /* --- CONTROLS --- */
+        .control-layer { position: absolute; bottom: 70px; width: 100%; height: 160px; pointer-events: none; z-index: 20; }
         
-        /* D-Pads */
-        .d-pad { position: absolute; width: 120px; height: 120px; pointer-events: auto; background: rgba(0,0,0,0.1); border-radius: 50%; }
+        .d-pad { position: absolute; width: 130px; height: 130px; pointer-events: auto; background: rgba(0,0,0,0.1); border-radius: 50%; }
         .pad-left { left: 20px; bottom: 10px; }
         .pad-right { right: 20px; bottom: 10px; }
 
-        /* Buttons */
         .btn {
             background: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255, 255, 255, 0.3);
             border-radius: 8px; color: white; font-weight: bold; display: flex; align-items: center; justify-content: center;
@@ -39,40 +37,31 @@
         .btn:active { background: rgba(255, 255, 255, 0.5); }
 
         /* Directional Layout */
-        .btn-u { top: 0; left: 35px; width: 50px; height: 35px; }
-        .btn-d { bottom: 0; left: 35px; width: 50px; height: 35px; }
-        .btn-l { top: 35px; left: 0; width: 35px; height: 50px; }
-        .btn-r { top: 35px; right: 0; width: 35px; height: 50px; }
-
-        /* Look Pad Colors */
+        .btn-u { top: 0; left: 40px; width: 50px; height: 40px; }
+        .btn-d { bottom: 0; left: 40px; width: 50px; height: 40px; }
+        .btn-l { top: 40px; left: 0; width: 40px; height: 50px; }
+        .btn-r { top: 40px; right: 0; width: 40px; height: 50px; }
         .pad-right .btn { border-color: rgba(255, 215, 0, 0.5); } 
 
         /* Actions */
-        .actions { position: absolute; bottom: 140px; right: 20px; display: flex; gap: 10px; pointer-events: auto; }
-        .btn-act { position: relative; width: 50px; height: 50px; border-radius: 50%; font-size: 10px; }
+        .actions { position: absolute; bottom: 150px; right: 20px; display: flex; gap: 15px; pointer-events: auto; }
+        .btn-act { position: relative; width: 55px; height: 55px; border-radius: 50%; font-size: 10px; }
         .btn-break { background: rgba(255, 50, 50, 0.4); border-color: #ff5555; }
         .btn-build { background: rgba(50, 255, 100, 0.4); border-color: #55ff55; }
         
-        .btn-jump { 
-            position: absolute; bottom: 140px; left: 20px; 
-            width: 60px; height: 60px; border-radius: 50%; 
-            background: rgba(255, 200, 0, 0.4); pointer-events: auto; 
-        }
+        .btn-jump { position: absolute; bottom: 150px; left: 20px; width: 65px; height: 65px; border-radius: 50%; background: rgba(255, 200, 0, 0.4); pointer-events: auto; }
     </style>
 </head>
 <body>
     <div id="hud">
-        <h3>NanoCraft 0.6</h3>
-        Blocks: <span id="block-count">0</span>
+        <h3>NanoCraft 0.7</h3>
+        Camera: Stabilized | Blocks: <span id="block-count">0</span>
     </div>
     <div id="crosshair"></div>
 
-    <!-- INVENTORY -->
     <div id="inventory"></div>
 
-    <!-- CONTROLS -->
     <div class="control-layer">
-        <!-- Left: Movement -->
         <div class="btn btn-jump" id="btn-space">JUMP</div>
         <div class="d-pad pad-left">
             <div class="btn btn-u" id="btn-w">W</div>
@@ -81,7 +70,6 @@
             <div class="btn btn-d" id="btn-s">S</div>
         </div>
 
-        <!-- Right: Actions & Look -->
         <div class="actions">
             <div class="btn btn-act btn-break" id="btn-break">BREAK</div>
             <div class="btn btn-act btn-build" id="btn-build">BUILD</div>
@@ -101,7 +89,6 @@
     <script type="module">
         import * as THREE from 'three';
 
-        // --- 1. BLOCK MANIFEST ---
         const BLOCK_MANIFEST = [
             { id: 'grass', color: '#5fab3b', type: 'natural' },
             { id: 'dirt',  color: '#5D4037', type: 'natural' },
@@ -111,29 +98,21 @@
             { id: 'glass', color: '#88CCFF', type: 'glass' }
         ];
 
-        // --- 2. TEXTURE GENERATOR ---
         function createTexture(type, colorHex) {
             const c = document.createElement('canvas');
             c.width = 64; c.height = 64;
             const ctx = c.getContext('2d');
             ctx.fillStyle = colorHex; ctx.fillRect(0,0,64,64);
             ctx.fillStyle = 'rgba(0,0,0,0.1)';
-            
-            if(type === 'natural') {
-                for(let i=0; i<400; i++) ctx.fillRect(Math.random()*64, Math.random()*64, 2, 2);
-            } else if(type === 'brick') {
-                for(let y=0; y<64; y+=16) for(let x=0; x<64; x+=16) ctx.strokeRect(x,y,16,10);
-            } else if(type === 'wood') {
-                for(let y=0; y<64; y+=8) ctx.fillRect(0,y,64,1);
-            } else if(type === 'glass') {
-                ctx.strokeStyle='white'; ctx.strokeRect(5,5,20,20); ctx.globalAlpha=0.5;
-            }
+            if(type === 'natural') for(let i=0; i<400; i++) ctx.fillRect(Math.random()*64, Math.random()*64, 2, 2);
+            else if(type === 'brick') for(let y=0; y<64; y+=16) for(let x=0; x<64; x+=16) ctx.strokeRect(x,y,16,10);
+            else if(type === 'wood') for(let y=0; y<64; y+=8) ctx.fillRect(0,y,64,1);
+            else if(type === 'glass') { ctx.strokeStyle='white'; ctx.strokeRect(5,5,20,20); ctx.globalAlpha=0.5; }
             const tex = new THREE.CanvasTexture(c);
             tex.magFilter = THREE.NearestFilter;
             return { tex, url: c.toDataURL() };
         }
 
-        // --- 3. SETUP ---
         const WORLD_SIZE = 20;
         const CHUNK_CAPACITY = 3000;
         const scene = new THREE.Scene();
@@ -150,7 +129,6 @@
         sun.position.set(50, 100, 50);
         scene.add(ambient, sun);
 
-        // --- 4. BLOCK MESHES & INVENTORY UI ---
         const blockMeshes = {};
         const worldData = new Map();
         const activePools = {};
@@ -159,7 +137,6 @@
         let selectedBlockId = BLOCK_MANIFEST[0].id;
 
         BLOCK_MANIFEST.forEach((b, idx) => {
-            // Mesh
             const { tex, url } = createTexture(b.type, b.color);
             const mat = new THREE.MeshStandardMaterial({ map: tex, transparent: b.type==='glass', opacity: b.type==='glass'?0.6:1 });
             const mesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1), mat, CHUNK_CAPACITY);
@@ -167,7 +144,6 @@
             blockMeshes[b.id] = mesh;
             activePools[b.id] = 0;
 
-            // UI
             const slot = document.createElement('div');
             slot.className = 'inv-slot';
             if(idx===0) slot.classList.add('selected');
@@ -181,11 +157,9 @@
             inventoryEl.appendChild(slot);
         });
 
-        // --- 5. WORLD LOGIC ---
         function setBlock(x, y, z, id) {
             const key = `${x},${y},${z}`;
             if(worldData.has(key)) {
-                // Hide old block
                 const prev = worldData.get(key);
                 const pm = blockMeshes[prev.id];
                 const mat = new THREE.Matrix4();
@@ -196,7 +170,6 @@
                 worldData.delete(key);
             }
             if(id) {
-                // Place new
                 const mesh = blockMeshes[id];
                 const idx = activePools[id]++;
                 if(idx < CHUNK_CAPACITY) {
@@ -211,7 +184,6 @@
             document.getElementById('block-count').innerText = worldData.size;
         }
 
-        // Init Terrain
         for(let x=-WORLD_SIZE/2; x<WORLD_SIZE/2; x++) {
             for(let z=-WORLD_SIZE/2; z<WORLD_SIZE/2; z++) {
                 const h = Math.floor(Math.sin(x*0.2)*2 + Math.cos(z*0.2)*2);
@@ -221,9 +193,7 @@
             }
         }
 
-        // --- 6. INPUT & CONTROLS ---
         const input = { w:0, a:0, s:0, d:0, sp:0, lU:0, lD:0, lL:0, lR:0 };
-        
         const bind = (id, k) => {
             const el = document.getElementById(id);
             const on = (e)=>{e.preventDefault(); input[k]=1; el.style.background='rgba(255,255,255,0.5)';};
@@ -231,11 +201,9 @@
             el.addEventListener('touchstart', on); el.addEventListener('touchend', off);
             el.addEventListener('mousedown', on); el.addEventListener('mouseup', off);
         };
-        
         bind('btn-w','w'); bind('btn-s','s'); bind('btn-a','a'); bind('btn-d','d'); bind('btn-space','sp');
         bind('btn-look-u','lU'); bind('btn-look-d','lD'); bind('btn-look-l','lL'); bind('btn-look-r','lR');
 
-        // Raycaster
         const raycaster = new THREE.Raycaster();
         const center = new THREE.Vector2(0,0);
 
@@ -248,13 +216,11 @@
                 const y = Math.round(hit.point.y - hit.face.normal.y*0.1);
                 const z = Math.round(hit.point.z - hit.face.normal.z*0.1);
                 
-                if(mode === 'break') {
-                    setBlock(x, y, z, null);
-                } else {
+                if(mode === 'break') setBlock(x, y, z, null);
+                else {
                     const bx = x + hit.face.normal.x;
                     const by = y + hit.face.normal.y;
                     const bz = z + hit.face.normal.z;
-                    // Player collision check
                     if(!(Math.abs(bx-camera.position.x)<0.8 && Math.abs(by-camera.position.y+1.5)<1.8 && Math.abs(bz-camera.position.z)<0.8)) {
                         setBlock(bx, by, bz, selectedBlockId);
                     }
@@ -264,24 +230,29 @@
 
         document.getElementById('btn-break').addEventListener('touchstart', (e)=>{ e.preventDefault(); interact('break'); });
         document.getElementById('btn-build').addEventListener('touchstart', (e)=>{ e.preventDefault(); interact('build'); });
-        document.getElementById('btn-break').addEventListener('click', ()=>interact('break')); // PC fallback
-        document.getElementById('btn-build').addEventListener('click', ()=>interact('build')); // PC fallback
+        document.getElementById('btn-break').addEventListener('click', ()=>interact('break'));
+        document.getElementById('btn-build').addEventListener('click', ()=>interact('build'));
 
-        // --- 7. PHYSICS LOOP ---
+        // --- PHYSICS & ANIMATION ---
         camera.position.set(0, 8, 0);
         const velocity = new THREE.Vector3();
-
+        
         function animate() {
             requestAnimationFrame(animate);
 
-            // Look
+            // 1. ROTATION LOGIC
             const lookSpeed = 0.04;
             if(input.lL) camera.rotation.y += lookSpeed;
             if(input.lR) camera.rotation.y -= lookSpeed;
             if(input.lU) camera.rotation.x += lookSpeed;
             if(input.lD) camera.rotation.x -= lookSpeed;
 
-            // Move
+            // --- THE FIX: CLAMP VERTICAL LOOK ---
+            // Limit rotation between -90 degrees (-PI/2) and +90 degrees
+            const limit = Math.PI / 2 - 0.05; 
+            camera.rotation.x = Math.max(-limit, Math.min(limit, camera.rotation.x));
+
+            // 2. MOVEMENT LOGIC
             const speed = 0.15;
             const fwd = new THREE.Vector3(0,0,-1).applyQuaternion(camera.quaternion); fwd.y=0; fwd.normalize();
             const right = new THREE.Vector3(1,0,0).applyQuaternion(camera.quaternion); right.y=0; right.normalize();
@@ -291,7 +262,7 @@
             if(input.a) camera.position.add(right.multiplyScalar(-speed));
             if(input.d) camera.position.add(right.multiplyScalar(speed));
 
-            // Gravity
+            // 3. GRAVITY
             velocity.y -= 0.025;
             const nextY = camera.position.y + velocity.y;
             const feetX = Math.round(camera.position.x);
