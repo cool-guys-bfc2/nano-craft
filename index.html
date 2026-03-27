@@ -2,24 +2,28 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>AccelGL</title>
-    <link rel="stylesheet" href="https://pyscript.net/latest/pyscript.css" />
-    <script defer src="https://pyscript.net/latest/pyscript.js"></script>
+    <title>Processing in PyScript</title>
+    <link rel="stylesheet" href="https://pyscript.net">
+    <script type="module" src="https://pyscript.net"></script>
 </head>
 <body>
-    <py-config>
-        packages = ["vpython"]
-    </py-config>
-<py-script>
-from vpython import box, color, rate
+    <script type="py" config='{"packages": ["proceso"]}'>
+from proceso import Sketch
 
-# Create a box
-my_box = box(color=color.red, size=vector(1,1,1))
+p5 = Sketch()
 
-# Simple animation loop
-while True:
-    rate(60)
-    my_box.rotate(angle=0.01, axis=vector(0,1,0))
-</py-script>
+def setup():
+    p5.create_canvas(400, 400)
+    p5.background(220)
+
+def draw():
+    # p5.mouse_x and p5.mouse_y provide interaction
+    p5.fill(p5.random(255), p5.random(255), p5.random(255))
+    p5.circle(p5.mouse_x, p5.mouse_y, 50)
+
+p5.setup = setup
+p5.draw = draw
+p5.run()
+    </script>
 </body>
 </html>
