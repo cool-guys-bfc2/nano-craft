@@ -3,87 +3,72 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>NanoCraft Builder</title>
+    <title>NanoCraft Physics</title>
     <style>
         body { margin: 0; overflow: hidden; background: #87CEEB; font-family: 'Courier New', monospace; user-select: none; -webkit-user-select: none; }
         #hud { position: absolute; top: 10px; left: 10px; color: white; text-shadow: 2px 2px 0 #000; pointer-events: none; z-index: 10; }
         #crosshair { position: absolute; top: 50%; left: 50%; width: 20px; height: 20px; border: 2px solid white; transform: translate(-50%, -50%); border-radius: 50%; pointer-events: none; z-index: 10; mix-blend-mode: difference; }
         
-        /* --- CONTROLS UI --- */
+        /* --- UI CONTROLS --- */
         .control-layer { position: absolute; bottom: 20px; width: 100%; height: 180px; pointer-events: none; z-index: 20; display: flex; justify-content: space-between; padding: 0 20px; box-sizing: border-box; }
-        
-        /* Generic D-Pad Style */
         .d-pad { position: relative; width: 140px; height: 140px; pointer-events: auto; background: rgba(0,0,0,0.1); border-radius: 50%; }
         .btn {
-            background: rgba(255, 255, 255, 0.2);
-            border: 1px solid rgba(255, 255, 255, 0.4);
-            border-radius: 8px;
-            color: white; font-weight: bold;
+            background: rgba(255, 255, 255, 0.2); border: 1px solid rgba(255, 255, 255, 0.4);
+            border-radius: 8px; color: white; font-weight: bold;
             display: flex; align-items: center; justify-content: center;
-            position: absolute; cursor: pointer;
-            backdrop-filter: blur(4px);
+            position: absolute; cursor: pointer; backdrop-filter: blur(4px);
             touch-action: manipulation;
         }
         .btn:active { background: rgba(255, 255, 255, 0.5); }
 
-        /* Movement Pad (Left) */
+        /* Pad Positions */
         .pad-left { left: 10px; bottom: 10px; }
-        .btn-w { top: 0; left: 45px; width: 50px; height: 45px; }
-        .btn-s { bottom: 0; left: 45px; width: 50px; height: 45px; }
-        .btn-a { top: 45px; left: 0; width: 45px; height: 50px; }
-        .btn-d { top: 45px; right: 0; width: 45px; height: 50px; }
-
-        /* Look Pad (Right) */
         .pad-right { right: 10px; bottom: 10px; }
-        .btn-look-u { top: 0; left: 45px; width: 50px; height: 45px; border-color: #ffd700; }
-        .btn-look-d { bottom: 0; left: 45px; width: 50px; height: 45px; border-color: #ffd700; }
-        .btn-look-l { top: 45px; left: 0; width: 45px; height: 50px; border-color: #ffd700; }
-        .btn-look-r { top: 45px; right: 0; width: 45px; height: 50px; border-color: #ffd700; }
+        
+        /* Button Mapping */
+        .btn-u { top: 0; left: 45px; width: 50px; height: 45px; }
+        .btn-d { bottom: 0; left: 45px; width: 50px; height: 45px; }
+        .btn-l { top: 45px; left: 0; width: 45px; height: 50px; }
+        .btn-r { top: 45px; right: 0; width: 45px; height: 50px; }
 
-        /* Actions (Center/Top) */
+        /* Actions */
         .action-bar { position: absolute; bottom: 160px; right: 20px; display: flex; gap: 10px; pointer-events: auto; }
         .btn-action { width: 60px; height: 60px; position: relative; border-radius: 50%; font-size: 12px; text-align: center; }
         .btn-break { background: rgba(255, 50, 50, 0.4); }
         .btn-build { background: rgba(50, 255, 100, 0.4); }
-        .btn-jump { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); width: 80px; height: 50px; pointer-events: auto; }
-        
-        .instructions { font-size: 10px; color: #eee; margin-top: 5px; }
+        .btn-jump { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); width: 80px; height: 50px; pointer-events: auto; background: rgba(255, 200, 0, 0.4); }
     </style>
 </head>
 <body>
     <div id="hud">
-        <h3>NanoCraft 0.3</h3>
-        <div class="instructions">Click 'LOCK' to use Mouse | Use Pads for Touch</div>
-        Blocks: <span id="block-count">0</span> | Pool: <span id="pool-count">0</span>
+        <h3>NanoCraft 0.4 (Physics)</h3>
+        <div>Gravity: ON | Collision: ON</div>
+        Blocks: <span id="block-count">0</span>
     </div>
     <div id="crosshair"></div>
 
-    <!-- UI CONTROLS -->
     <div class="control-layer">
-        <!-- Move Pad -->
+        <!-- Movement -->
         <div class="d-pad pad-left">
-            <div class="btn btn-w" id="btn-w">W</div>
-            <div class="btn btn-a" id="btn-a">A</div>
-            <div class="btn btn-d" id="btn-d">D</div>
-            <div class="btn btn-s" id="btn-s">S</div>
+            <div class="btn btn-u" id="btn-w">W</div>
+            <div class="btn btn-l" id="btn-a">A</div>
+            <div class="btn btn-r" id="btn-d">D</div>
+            <div class="btn btn-d" id="btn-s">S</div>
         </div>
 
-        <!-- Jump (Center) -->
         <div class="btn btn-jump" id="btn-space">JUMP</div>
 
-        <!-- Look Pad -->
+        <!-- Look -->
         <div class="d-pad pad-right">
-            <div class="btn btn-look-u" id="btn-up">↑</div>
-            <div class="btn btn-look-l" id="btn-left">←</div>
-            <div class="btn btn-look-r" id="btn-right">→</div>
-            <div class="btn btn-look-d" id="btn-down">↓</div>
+            <div class="btn btn-u" id="btn-up" style="border-color:gold">↑</div>
+            <div class="btn btn-l" id="btn-left" style="border-color:gold">←</div>
+            <div class="btn btn-r" id="btn-right" style="border-color:gold">→</div>
+            <div class="btn btn-d" id="btn-down" style="border-color:gold">↓</div>
         </div>
         
-        <!-- Actions -->
         <div class="action-bar">
             <div class="btn btn-action btn-break" id="btn-break">BREAK</div>
             <div class="btn btn-action btn-build" id="btn-build">BUILD</div>
-            <div class="btn btn-action" style="background: #333;" id="btn-lock">LOCK</div>
         </div>
     </div>
 
@@ -95,9 +80,15 @@
         import * as THREE from 'three';
 
         // --- CONFIGURATION ---
-        const WORLD_SIZE = 20;
-        const BUILD_POOL_SIZE = 500; // Spare blocks for building
+        const WORLD_SIZE = 24;
+        const GRAVITY = 0.02;
+        const JUMP_FORCE = 0.4;
+        const MOVE_SPEED = 0.15;
         
+        // --- DATA STRUCTURES ---
+        // 'x,y,z' -> instanceId (Used for Collision AND Modification)
+        const world = new Map(); 
+
         // --- SETUP ---
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x87CEEB);
@@ -111,152 +102,168 @@
         sun.position.set(50, 100, 50);
         scene.add(ambient, sun);
 
-        // --- INSTANCED MESH SYSTEM ---
+        // --- GENERATION ---
         const geometry = new THREE.BoxGeometry(1, 1, 1);
         const material = new THREE.MeshStandardMaterial({ color: 0x5da644 });
-        
-        // Total Capacity = World Gen + Spare Pool
-        const totalCapacity = (WORLD_SIZE * WORLD_SIZE * 5) + BUILD_POOL_SIZE;
-        const mesh = new THREE.InstancedMesh(geometry, material, totalCapacity);
+        const maxInstances = WORLD_SIZE * WORLD_SIZE * 10;
+        const mesh = new THREE.InstancedMesh(geometry, material, maxInstances);
         scene.add(mesh);
 
         const dummy = new THREE.Object3D();
-        const matrix = new THREE.Matrix4();
         let count = 0;
 
-        // 1. Generate Terrain
+        function addBlock(x, y, z) {
+            const key = `${x},${y},${z}`;
+            if (world.has(key)) return; // Already exists
+
+            dummy.position.set(x, y, z);
+            dummy.scale.set(1, 1, 1);
+            dummy.updateMatrix();
+            mesh.setMatrixAt(count, dummy.matrix);
+            
+            world.set(key, count); // Register block for physics
+            count++;
+        }
+
+        // Generate Terrain
         for (let x = -WORLD_SIZE/2; x < WORLD_SIZE/2; x++) {
             for (let z = -WORLD_SIZE/2; z < WORLD_SIZE/2; z++) {
-                const y = Math.floor(Math.sin(x * 0.2) * 2 + Math.cos(z * 0.2) * 2);
-                for (let h = -4; h <= y; h++) {
-                    dummy.position.set(x, h, z);
-                    dummy.updateMatrix();
-                    mesh.setMatrixAt(count++, dummy.matrix);
-                }
+                const h = Math.floor(Math.sin(x * 0.2) * 3 + Math.cos(z * 0.2) * 3);
+                // Fill column so we don't see under the world
+                for (let y = -5; y <= h; y++) addBlock(x, y, z);
             }
         }
-        
-        // 2. Initialize Build Pool (Hidden blocks)
-        const poolStartIndex = count;
-        let nextPoolIndex = 0;
-        for(let i = 0; i < BUILD_POOL_SIZE; i++) {
-            dummy.position.set(0, -1000, 0); // Hide underground
-            dummy.updateMatrix();
-            mesh.setMatrixAt(count + i, dummy.matrix);
-        }
-        
         mesh.instanceMatrix.needsUpdate = true;
         document.getElementById('block-count').innerText = count;
-        document.getElementById('pool-count').innerText = BUILD_POOL_SIZE;
 
-        // --- INTERACTION LOGIC (RAYCASTING) ---
+        // --- PHYSICS ENGINE ---
+        camera.position.set(0, 10, 0);
+        const velocity = new THREE.Vector3();
+        let onGround = false;
+
+        function checkCollision(pos) {
+            // Convert float position to integer grid coordinate
+            const x = Math.round(pos.x);
+            const y = Math.round(pos.y);
+            const z = Math.round(pos.z);
+            return world.has(`${x},${y},${z}`);
+        }
+
+        // --- CONTROLS INPUT ---
+        const input = { w:0, a:0, s:0, d:0, lU:0, lD:0, lL:0, lR:0, sp:0 };
+        const bind = (id, k) => {
+            const el = document.getElementById(id);
+            const start = (e) => { e.preventDefault(); input[k] = 1; el.style.background='rgba(255,255,255,0.5)'; };
+            const end = (e) => { e.preventDefault(); input[k] = 0; el.style.background=''; };
+            el.addEventListener('touchstart', start); el.addEventListener('touchend', end);
+            el.addEventListener('mousedown', start); el.addEventListener('mouseup', end);
+        };
+        bind('btn-w','w'); bind('btn-s','s'); bind('btn-a','a'); bind('btn-d','d');
+        bind('btn-up','lU'); bind('btn-down','lD'); bind('btn-left','lL'); bind('btn-right','lR');
+        bind('btn-space','sp');
+
+        // Keyboard
+        document.addEventListener('keydown', e => {
+            if(e.key==='w')input.w=1; if(e.key==='s')input.s=1; if(e.key==='a')input.a=1; if(e.key==='d')input.d=1; if(e.key===' ')input.sp=1;
+        });
+        document.addEventListener('keyup', e => {
+            if(e.key==='w')input.w=0; if(e.key==='s')input.s=0; if(e.key==='a')input.a=0; if(e.key==='d')input.d=0; if(e.key===' ')input.sp=0;
+        });
+
+        // --- BUILD / BREAK ---
         const raycaster = new THREE.Raycaster();
-        const center = new THREE.Vector2(0, 0); // Center of screen
+        const center = new THREE.Vector2(0,0);
+        const matrix = new THREE.Matrix4();
 
-        function getTargetBlock() {
+        function getTarget() {
             raycaster.setFromCamera(center, camera);
-            const intersects = raycaster.intersectObject(mesh);
-            if (intersects.length > 0) {
-                // instanceId is the index of the specific block we hit
-                return { id: intersects[0].instanceId, point: intersects[0].point, normal: intersects[0].face.normal };
+            const hits = raycaster.intersectObject(mesh);
+            if (hits.length > 0) {
+                const hit = hits[0];
+                // Get integer coords of the block we hit
+                const x = Math.round(hit.point.x - hit.face.normal.x * 0.1);
+                const y = Math.round(hit.point.y - hit.face.normal.y * 0.1);
+                const z = Math.round(hit.point.z - hit.face.normal.z * 0.1);
+                return { id: hit.instanceId, pos: new THREE.Vector3(x, y, z), normal: hit.face.normal };
             }
             return null;
         }
 
-        // Destroy Block
         document.getElementById('btn-break').addEventListener('click', (e) => {
             e.preventDefault();
-            const target = getTargetBlock();
+            const target = getTarget();
             if (target) {
-                // Hide block by scaling to 0
+                // Hide Visual
                 mesh.getMatrixAt(target.id, matrix);
-                matrix.elements[0] = 0; matrix.elements[5] = 0; matrix.elements[10] = 0; // Scale 0
+                matrix.elements[0] = 0; // Scale to 0
                 mesh.setMatrixAt(target.id, matrix);
                 mesh.instanceMatrix.needsUpdate = true;
+                
+                // Remove from Physics
+                world.delete(`${target.pos.x},${target.pos.y},${target.pos.z}`);
             }
         });
 
-        // Build Block
         document.getElementById('btn-build').addEventListener('click', (e) => {
             e.preventDefault();
-            const target = getTargetBlock();
-            if (target && nextPoolIndex < BUILD_POOL_SIZE) {
-                // Calculate new position: Hit Point + Normal (snapped to grid)
-                const pos = target.point.clone().add(target.normal.multiplyScalar(0.5)).floor().addScalar(0.5);
-                
-                const newId = poolStartIndex + nextPoolIndex;
-                dummy.position.copy(pos);
-                dummy.scale.set(1,1,1); // Ensure it's visible
-                dummy.updateMatrix();
-                
-                mesh.setMatrixAt(newId, dummy.matrix);
+            const target = getTarget();
+            if (target) {
+                const pos = target.pos.clone().add(target.normal);
+                addBlock(pos.x, pos.y, pos.z);
                 mesh.instanceMatrix.needsUpdate = true;
-                
-                nextPoolIndex++;
-                document.getElementById('pool-count').innerText = BUILD_POOL_SIZE - nextPoolIndex;
             }
         });
 
-        // --- CONTROLS ---
-        camera.position.set(0, 5, 10);
-        const input = { w:0, a:0, s:0, d:0, lookU:0, lookD:0, lookL:0, lookR:0, space:0 };
-
-        const bind = (id, key) => {
-            const el = document.getElementById(id);
-            el.addEventListener('touchstart', (e) => { e.preventDefault(); input[key] = 1; el.style.background='rgba(255,255,255,0.5)'; });
-            el.addEventListener('touchend', (e) => { e.preventDefault(); input[key] = 0; el.style.background=''; });
-            el.addEventListener('mousedown', (e) => { e.preventDefault(); input[key] = 1; });
-            el.addEventListener('mouseup', (e) => { e.preventDefault(); input[key] = 0; });
-        };
-
-        bind('btn-w', 'w'); bind('btn-s', 's'); bind('btn-a', 'a'); bind('btn-d', 'd');
-        bind('btn-up', 'lookU'); bind('btn-down', 'lookD'); bind('btn-left', 'lookL'); bind('btn-right', 'lookR');
-        bind('btn-space', 'space');
-
-        // PC Keyboard Support
-        document.addEventListener('keydown', (e) => {
-            if(e.key === 'w') input.w=1; if(e.key === 's') input.s=1;
-            if(e.key === 'a') input.a=1; if(e.key === 'd') input.d=1;
-            if(e.key === ' ') input.space=1;
-        });
-        document.addEventListener('keyup', (e) => {
-            if(e.key === 'w') input.w=0; if(e.key === 's') input.s=0;
-            if(e.key === 'a') input.a=0; if(e.key === 'd') input.d=0;
-            if(e.key === ' ') input.space=0;
-        });
-        
-        document.getElementById('btn-lock').addEventListener('click', () => document.body.requestPointerLock());
-        document.addEventListener('mousemove', (e) => {
-            if (document.pointerLockElement === document.body) {
-                camera.rotation.y -= e.movementX * 0.002;
-                camera.rotation.x -= e.movementY * 0.002;
-            }
-        });
-
-        // --- LOOP ---
-        const velocity = new THREE.Vector3();
+        // --- GAME LOOP ---
         function animate() {
             requestAnimationFrame(animate);
-            
-            // 1. Movement Logic
-            const moveSpeed = 0.1;
-            if(input.w) { camera.translateZ(-moveSpeed); }
-            if(input.s) { camera.translateZ(moveSpeed); }
-            if(input.a) { camera.translateX(-moveSpeed); }
-            if(input.d) { camera.translateX(moveSpeed); }
-            
-            // 2. Look Logic (Button based)
-            const lookSpeed = 0.03;
-            if(input.lookL) camera.rotation.y += lookSpeed;
-            if(input.lookR) camera.rotation.y -= lookSpeed;
-            if(input.lookU) camera.rotation.x += lookSpeed;
-            if(input.lookD) camera.rotation.x -= lookSpeed;
 
-            // 3. Physics (Simple)
-            if(input.space && camera.position.y < 6) velocity.y = 0.2;
-            camera.position.y += velocity.y;
-            velocity.y -= 0.01; // Gravity
-            if(camera.position.y < 2) { camera.position.y = 2; velocity.y = 0; }
+            // 1. Camera Rotation
+            if(input.lL) camera.rotation.y += 0.04;
+            if(input.lR) camera.rotation.y -= 0.04;
+            if(input.lU) camera.rotation.x += 0.04;
+            if(input.lD) camera.rotation.x -= 0.04;
+
+            // 2. Horizontal Movement
+            const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+            forward.y = 0; forward.normalize();
+            const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
+            right.y = 0; right.normalize();
+
+            if(input.w) camera.position.add(forward.multiplyScalar(MOVE_SPEED));
+            if(input.s) camera.position.add(forward.multiplyScalar(-MOVE_SPEED));
+            if(input.a) camera.position.add(right.multiplyScalar(-MOVE_SPEED));
+            if(input.d) camera.position.add(right.multiplyScalar(MOVE_SPEED));
+
+            // 3. Vertical Physics (Gravity)
+            velocity.y -= GRAVITY;
+            
+            // Check "Next" Position
+            const nextY = camera.position.y + velocity.y;
+            
+            // FEET Check (1.5 units below camera)
+            const feetPos = new THREE.Vector3(camera.position.x, nextY - 1.5, camera.position.z);
+            
+            if (checkCollision(feetPos)) {
+                // HIT GROUND
+                velocity.y = 0;
+                onGround = true;
+                // Snap to top of block (Integer Y + 0.5 block size + 1.5 eye height)
+                camera.position.y = Math.round(feetPos.y) + 0.5 + 1.5; 
+            } else {
+                // FALLING
+                onGround = false;
+                camera.position.y = nextY;
+            }
+
+            // Jump
+            if (input.sp && onGround) {
+                velocity.y = JUMP_FORCE;
+                onGround = false;
+            }
+            
+            // World Floor Safety
+            if(camera.position.y < -10) { camera.position.set(0, 10, 0); velocity.y = 0; }
 
             renderer.render(scene, camera);
         }
