@@ -3,62 +3,87 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>NanoCraft Touch</title>
+    <title>NanoCraft Builder</title>
     <style>
         body { margin: 0; overflow: hidden; background: #87CEEB; font-family: 'Courier New', monospace; user-select: none; -webkit-user-select: none; }
         #hud { position: absolute; top: 10px; left: 10px; color: white; text-shadow: 2px 2px 0 #000; pointer-events: none; z-index: 10; }
-        #crosshair { position: absolute; top: 50%; left: 50%; width: 20px; height: 20px; border: 2px solid white; transform: translate(-50%, -50%); border-radius: 50%; pointer-events: none; z-index: 10; }
+        #crosshair { position: absolute; top: 50%; left: 50%; width: 20px; height: 20px; border: 2px solid white; transform: translate(-50%, -50%); border-radius: 50%; pointer-events: none; z-index: 10; mix-blend-mode: difference; }
         
-        /* --- TOUCH CONTROLS UI --- */
-        .control-layer { position: absolute; bottom: 20px; width: 100%; height: 150px; pointer-events: none; z-index: 20; display: flex; justify-content: space-between; padding: 0 20px; box-sizing: border-box; }
-        .d-pad { position: relative; width: 150px; height: 150px; pointer-events: auto; }
-        .actions { position: relative; width: 100px; height: 150px; pointer-events: auto; display: flex; align-items: flex-end; justify-content: flex-end; }
-
+        /* --- CONTROLS UI --- */
+        .control-layer { position: absolute; bottom: 20px; width: 100%; height: 180px; pointer-events: none; z-index: 20; display: flex; justify-content: space-between; padding: 0 20px; box-sizing: border-box; }
+        
+        /* Generic D-Pad Style */
+        .d-pad { position: relative; width: 140px; height: 140px; pointer-events: auto; background: rgba(0,0,0,0.1); border-radius: 50%; }
         .btn {
-            background: rgba(255, 255, 255, 0.3);
-            border: 2px solid rgba(255, 255, 255, 0.5);
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.4);
             border-radius: 8px;
-            color: white;
-            font-weight: bold;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: absolute;
-            cursor: pointer;
+            color: white; font-weight: bold;
+            display: flex; align-items: center; justify-content: center;
+            position: absolute; cursor: pointer;
             backdrop-filter: blur(4px);
-            touch-action: manipulation; /* Prevents double-tap zoom */
+            touch-action: manipulation;
         }
-        .btn:active, .btn.active { background: rgba(255, 255, 255, 0.6); }
+        .btn:active { background: rgba(255, 255, 255, 0.5); }
 
-        /* D-Pad Layout */
-        .btn-up { top: 0; left: 50px; width: 50px; height: 50px; }
-        .btn-down { bottom: 0; left: 50px; width: 50px; height: 50px; }
-        .btn-left { top: 50px; left: 0; width: 50px; height: 50px; }
-        .btn-right { top: 50px; right: 0; width: 50px; height: 50px; }
+        /* Movement Pad (Left) */
+        .pad-left { left: 10px; bottom: 10px; }
+        .btn-w { top: 0; left: 45px; width: 50px; height: 45px; }
+        .btn-s { bottom: 0; left: 45px; width: 50px; height: 45px; }
+        .btn-a { top: 45px; left: 0; width: 45px; height: 50px; }
+        .btn-d { top: 45px; right: 0; width: 45px; height: 50px; }
 
-        /* Action Layout */
-        .btn-jump { width: 80px; height: 80px; border-radius: 50%; bottom: 0; right: 0; background: rgba(255, 200, 0, 0.4); }
-        .btn-lock { width: 60px; height: 40px; top: 0; right: 0; font-size: 10px; background: rgba(255, 0, 0, 0.4); }
+        /* Look Pad (Right) */
+        .pad-right { right: 10px; bottom: 10px; }
+        .btn-look-u { top: 0; left: 45px; width: 50px; height: 45px; border-color: #ffd700; }
+        .btn-look-d { bottom: 0; left: 45px; width: 50px; height: 45px; border-color: #ffd700; }
+        .btn-look-l { top: 45px; left: 0; width: 45px; height: 50px; border-color: #ffd700; }
+        .btn-look-r { top: 45px; right: 0; width: 45px; height: 50px; border-color: #ffd700; }
+
+        /* Actions (Center/Top) */
+        .action-bar { position: absolute; bottom: 160px; right: 20px; display: flex; gap: 10px; pointer-events: auto; }
+        .btn-action { width: 60px; height: 60px; position: relative; border-radius: 50%; font-size: 12px; text-align: center; }
+        .btn-break { background: rgba(255, 50, 50, 0.4); }
+        .btn-build { background: rgba(50, 255, 100, 0.4); }
+        .btn-jump { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); width: 80px; height: 50px; pointer-events: auto; }
+        
+        .instructions { font-size: 10px; color: #eee; margin-top: 5px; }
     </style>
 </head>
 <body>
     <div id="hud">
-        <h3>NanoCraft 0.2</h3>
-        <span id="fps">60</span> FPS | Blocks: <span id="block-count">0</span>
+        <h3>NanoCraft 0.3</h3>
+        <div class="instructions">Click 'LOCK' to use Mouse | Use Pads for Touch</div>
+        Blocks: <span id="block-count">0</span> | Pool: <span id="pool-count">0</span>
     </div>
     <div id="crosshair"></div>
 
     <!-- UI CONTROLS -->
     <div class="control-layer">
-        <div class="d-pad">
-            <div class="btn btn-up" id="btn-w">W</div>
-            <div class="btn btn-left" id="btn-a">A</div>
-            <div class="btn btn-right" id="btn-d">D</div>
-            <div class="btn btn-down" id="btn-s">S</div>
+        <!-- Move Pad -->
+        <div class="d-pad pad-left">
+            <div class="btn btn-w" id="btn-w">W</div>
+            <div class="btn btn-a" id="btn-a">A</div>
+            <div class="btn btn-d" id="btn-d">D</div>
+            <div class="btn btn-s" id="btn-s">S</div>
         </div>
-        <div class="actions">
-            <div class="btn btn-lock" id="btn-lock">LOCK MOUSE</div>
-            <div class="btn btn-jump" id="btn-space">JUMP</div>
+
+        <!-- Jump (Center) -->
+        <div class="btn btn-jump" id="btn-space">JUMP</div>
+
+        <!-- Look Pad -->
+        <div class="d-pad pad-right">
+            <div class="btn btn-look-u" id="btn-up">↑</div>
+            <div class="btn btn-look-l" id="btn-left">←</div>
+            <div class="btn btn-look-r" id="btn-right">→</div>
+            <div class="btn btn-look-d" id="btn-down">↓</div>
+        </div>
+        
+        <!-- Actions -->
+        <div class="action-bar">
+            <div class="btn btn-action btn-break" id="btn-break">BREAK</div>
+            <div class="btn btn-action btn-build" id="btn-build">BUILD</div>
+            <div class="btn btn-action" style="background: #333;" id="btn-lock">LOCK</div>
         </div>
     </div>
 
@@ -70,13 +95,12 @@
         import * as THREE from 'three';
 
         // --- CONFIGURATION ---
-        const WORLD_SIZE = 32;
-        const MAX_HEIGHT = 8;
+        const WORLD_SIZE = 20;
+        const BUILD_POOL_SIZE = 500; // Spare blocks for building
         
         // --- SETUP ---
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x87CEEB);
-        scene.fog = new THREE.Fog(0x87CEEB, 10, 50);
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: false });
         renderer.setSize(window.innerWidth, window.innerHeight);
@@ -87,124 +111,157 @@
         sun.position.set(50, 100, 50);
         scene.add(ambient, sun);
 
-        // --- VOXELS ---
+        // --- INSTANCED MESH SYSTEM ---
         const geometry = new THREE.BoxGeometry(1, 1, 1);
         const material = new THREE.MeshStandardMaterial({ color: 0x5da644 });
-        const mesh = new THREE.InstancedMesh(geometry, material, WORLD_SIZE * WORLD_SIZE * MAX_HEIGHT);
+        
+        // Total Capacity = World Gen + Spare Pool
+        const totalCapacity = (WORLD_SIZE * WORLD_SIZE * 5) + BUILD_POOL_SIZE;
+        const mesh = new THREE.InstancedMesh(geometry, material, totalCapacity);
         scene.add(mesh);
 
         const dummy = new THREE.Object3D();
+        const matrix = new THREE.Matrix4();
         let count = 0;
+
+        // 1. Generate Terrain
         for (let x = -WORLD_SIZE/2; x < WORLD_SIZE/2; x++) {
             for (let z = -WORLD_SIZE/2; z < WORLD_SIZE/2; z++) {
-                const y = Math.floor(Math.sin(x * 0.1) * 3 + Math.cos(z * 0.1) * 3);
-                for (let h = -5; h <= y; h++) {
+                const y = Math.floor(Math.sin(x * 0.2) * 2 + Math.cos(z * 0.2) * 2);
+                for (let h = -4; h <= y; h++) {
                     dummy.position.set(x, h, z);
                     dummy.updateMatrix();
                     mesh.setMatrixAt(count++, dummy.matrix);
                 }
             }
         }
+        
+        // 2. Initialize Build Pool (Hidden blocks)
+        const poolStartIndex = count;
+        let nextPoolIndex = 0;
+        for(let i = 0; i < BUILD_POOL_SIZE; i++) {
+            dummy.position.set(0, -1000, 0); // Hide underground
+            dummy.updateMatrix();
+            mesh.setMatrixAt(count + i, dummy.matrix);
+        }
+        
         mesh.instanceMatrix.needsUpdate = true;
         document.getElementById('block-count').innerText = count;
+        document.getElementById('pool-count').innerText = BUILD_POOL_SIZE;
 
-        // --- PHYSICS & INPUT STATE ---
-        camera.position.set(0, 10, 10);
-        const velocity = new THREE.Vector3();
-        const direction = new THREE.Vector3();
-        
-        // Input State Object
-        const input = { w: false, a: false, s: false, d: false, space: false };
+        // --- INTERACTION LOGIC (RAYCASTING) ---
+        const raycaster = new THREE.Raycaster();
+        const center = new THREE.Vector2(0, 0); // Center of screen
 
-        // --- CONTROLLER LOGIC (KEYBOARD) ---
-        const onKey = (e, active) => {
-            switch (e.code) {
-                case 'KeyW': input.w = active; break;
-                case 'KeyS': input.s = active; break;
-                case 'KeyA': input.a = active; break;
-                case 'KeyD': input.d = active; break;
-                case 'Space': input.space = active; break;
+        function getTargetBlock() {
+            raycaster.setFromCamera(center, camera);
+            const intersects = raycaster.intersectObject(mesh);
+            if (intersects.length > 0) {
+                // instanceId is the index of the specific block we hit
+                return { id: intersects[0].instanceId, point: intersects[0].point, normal: intersects[0].face.normal };
             }
-        };
-        document.addEventListener('keydown', (e) => onKey(e, true));
-        document.addEventListener('keyup', (e) => onKey(e, false));
+            return null;
+        }
 
-        // --- CONTROLLER LOGIC (TOUCH/MOUSE UI) ---
-        const bindBtn = (id, key) => {
-            const btn = document.getElementById(id);
-            
-            // Mouse Events
-            btn.addEventListener('mousedown', (e) => { e.preventDefault(); input[key] = true; });
-            btn.addEventListener('mouseup', (e) => { e.preventDefault(); input[key] = false; });
-            btn.addEventListener('mouseleave', () => { input[key] = false; });
-
-            // Touch Events (Crucial for Mobile)
-            btn.addEventListener('touchstart', (e) => { e.preventDefault(); input[key] = true; btn.classList.add('active'); });
-            btn.addEventListener('touchend', (e) => { e.preventDefault(); input[key] = false; btn.classList.remove('active'); });
-        };
-
-        bindBtn('btn-w', 'w');
-        bindBtn('btn-a', 'a');
-        bindBtn('btn-s', 's');
-        bindBtn('btn-d', 'd');
-        bindBtn('btn-space', 'space');
-
-        // Lock Button
-        document.getElementById('btn-lock').addEventListener('click', () => {
-            document.body.requestPointerLock();
+        // Destroy Block
+        document.getElementById('btn-break').addEventListener('click', (e) => {
+            e.preventDefault();
+            const target = getTargetBlock();
+            if (target) {
+                // Hide block by scaling to 0
+                mesh.getMatrixAt(target.id, matrix);
+                matrix.elements[0] = 0; matrix.elements[5] = 0; matrix.elements[10] = 0; // Scale 0
+                mesh.setMatrixAt(target.id, matrix);
+                mesh.instanceMatrix.needsUpdate = true;
+            }
         });
 
-        // Mouse Look (Only works when locked)
+        // Build Block
+        document.getElementById('btn-build').addEventListener('click', (e) => {
+            e.preventDefault();
+            const target = getTargetBlock();
+            if (target && nextPoolIndex < BUILD_POOL_SIZE) {
+                // Calculate new position: Hit Point + Normal (snapped to grid)
+                const pos = target.point.clone().add(target.normal.multiplyScalar(0.5)).floor().addScalar(0.5);
+                
+                const newId = poolStartIndex + nextPoolIndex;
+                dummy.position.copy(pos);
+                dummy.scale.set(1,1,1); // Ensure it's visible
+                dummy.updateMatrix();
+                
+                mesh.setMatrixAt(newId, dummy.matrix);
+                mesh.instanceMatrix.needsUpdate = true;
+                
+                nextPoolIndex++;
+                document.getElementById('pool-count').innerText = BUILD_POOL_SIZE - nextPoolIndex;
+            }
+        });
+
+        // --- CONTROLS ---
+        camera.position.set(0, 5, 10);
+        const input = { w:0, a:0, s:0, d:0, lookU:0, lookD:0, lookL:0, lookR:0, space:0 };
+
+        const bind = (id, key) => {
+            const el = document.getElementById(id);
+            el.addEventListener('touchstart', (e) => { e.preventDefault(); input[key] = 1; el.style.background='rgba(255,255,255,0.5)'; });
+            el.addEventListener('touchend', (e) => { e.preventDefault(); input[key] = 0; el.style.background=''; });
+            el.addEventListener('mousedown', (e) => { e.preventDefault(); input[key] = 1; });
+            el.addEventListener('mouseup', (e) => { e.preventDefault(); input[key] = 0; });
+        };
+
+        bind('btn-w', 'w'); bind('btn-s', 's'); bind('btn-a', 'a'); bind('btn-d', 'd');
+        bind('btn-up', 'lookU'); bind('btn-down', 'lookD'); bind('btn-left', 'lookL'); bind('btn-right', 'lookR');
+        bind('btn-space', 'space');
+
+        // PC Keyboard Support
+        document.addEventListener('keydown', (e) => {
+            if(e.key === 'w') input.w=1; if(e.key === 's') input.s=1;
+            if(e.key === 'a') input.a=1; if(e.key === 'd') input.d=1;
+            if(e.key === ' ') input.space=1;
+        });
+        document.addEventListener('keyup', (e) => {
+            if(e.key === 'w') input.w=0; if(e.key === 's') input.s=0;
+            if(e.key === 'a') input.a=0; if(e.key === 'd') input.d=0;
+            if(e.key === ' ') input.space=0;
+        });
+        
+        document.getElementById('btn-lock').addEventListener('click', () => document.body.requestPointerLock());
         document.addEventListener('mousemove', (e) => {
             if (document.pointerLockElement === document.body) {
                 camera.rotation.y -= e.movementX * 0.002;
                 camera.rotation.x -= e.movementY * 0.002;
-                // Clamp vertical look
-                camera.rotation.x = Math.max(-Math.PI/2, Math.min(Math.PI/2, camera.rotation.x));
             }
         });
 
-        // --- GAME LOOP ---
-        const clock = new THREE.Clock();
-        
+        // --- LOOP ---
+        const velocity = new THREE.Vector3();
         function animate() {
             requestAnimationFrame(animate);
-            const delta = Math.min(clock.getDelta(), 0.1);
-
-            // Apply Friction (Decay)
-            velocity.x -= velocity.x * 10.0 * delta;
-            velocity.z -= velocity.z * 10.0 * delta;
-            velocity.y -= 50.0 * delta; // Gravity
-
-            // Determine Movement Direction
-            direction.z = Number(input.w) - Number(input.s);
-            direction.x = Number(input.d) - Number(input.a);
-            direction.normalize();
-
-            // Apply Velocity
-            if (input.w || input.s) velocity.z -= direction.z * 100.0 * delta;
-            if (input.a || input.d) velocity.x -= direction.x * 100.0 * delta;
             
-            // Jump (Ground check simplified)
-            if (input.space && camera.position.y < 6 && velocity.y < 0) {
-                velocity.y = 15;
-            }
+            // 1. Movement Logic
+            const moveSpeed = 0.1;
+            if(input.w) { camera.translateZ(-moveSpeed); }
+            if(input.s) { camera.translateZ(moveSpeed); }
+            if(input.a) { camera.translateX(-moveSpeed); }
+            if(input.d) { camera.translateX(moveSpeed); }
+            
+            // 2. Look Logic (Button based)
+            const lookSpeed = 0.03;
+            if(input.lookL) camera.rotation.y += lookSpeed;
+            if(input.lookR) camera.rotation.y -= lookSpeed;
+            if(input.lookU) camera.rotation.x += lookSpeed;
+            if(input.lookD) camera.rotation.x -= lookSpeed;
 
-            // Move Camera
-            camera.translateX(-velocity.x * delta);
-            camera.translateZ(velocity.z * delta);
-            camera.position.y += velocity.y * delta;
-
-            // Floor Collision
-            if (camera.position.y < 5) {
-                velocity.y = 0;
-                camera.position.y = 5;
-            }
+            // 3. Physics (Simple)
+            if(input.space && camera.position.y < 6) velocity.y = 0.2;
+            camera.position.y += velocity.y;
+            velocity.y -= 0.01; // Gravity
+            if(camera.position.y < 2) { camera.position.y = 2; velocity.y = 0; }
 
             renderer.render(scene, camera);
         }
         animate();
-
+        
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
