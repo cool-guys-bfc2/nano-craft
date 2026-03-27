@@ -5,12 +5,13 @@
     <title>Processing in PyScript</title>
     <link rel="stylesheet" href="https://pyscript.net">
     <script type="module" src="https://pyscript.net"></script>
+    <script defer src="https://pyscript.net/alpha/pyscript.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+
 </head>
 <body>
-    <script type="py" config='{"packages": ["proceso"]}'>
-from proceso import Sketch
-
-p5 = Sketch()
+    <script type="py>
+from js import p5
 
 def setup():
     p5.create_canvas(400, 400)
