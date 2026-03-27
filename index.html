@@ -3,73 +3,60 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>NanoCraft Physics</title>
+    <title>NanoCraft 0.5</title>
     <style>
         body { margin: 0; overflow: hidden; background: #87CEEB; font-family: 'Courier New', monospace; user-select: none; -webkit-user-select: none; }
         #hud { position: absolute; top: 10px; left: 10px; color: white; text-shadow: 2px 2px 0 #000; pointer-events: none; z-index: 10; }
         #crosshair { position: absolute; top: 50%; left: 50%; width: 20px; height: 20px; border: 2px solid white; transform: translate(-50%, -50%); border-radius: 50%; pointer-events: none; z-index: 10; mix-blend-mode: difference; }
         
-        /* --- UI CONTROLS --- */
-        .control-layer { position: absolute; bottom: 20px; width: 100%; height: 180px; pointer-events: none; z-index: 20; display: flex; justify-content: space-between; padding: 0 20px; box-sizing: border-box; }
-        .d-pad { position: relative; width: 140px; height: 140px; pointer-events: auto; background: rgba(0,0,0,0.1); border-radius: 50%; }
-        .btn {
-            background: rgba(255, 255, 255, 0.2); border: 1px solid rgba(255, 255, 255, 0.4);
-            border-radius: 8px; color: white; font-weight: bold;
-            display: flex; align-items: center; justify-content: center;
-            position: absolute; cursor: pointer; backdrop-filter: blur(4px);
-            touch-action: manipulation;
+        /* --- INVENTORY BAR --- */
+        #inventory {
+            position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
+            display: flex; gap: 8px; background: rgba(0,0,0,0.5); padding: 8px; border-radius: 12px;
+            pointer-events: auto; z-index: 30;
         }
-        .btn:active { background: rgba(255, 255, 255, 0.5); }
+        .inv-slot {
+            width: 50px; height: 50px; border: 3px solid #555; border-radius: 8px;
+            cursor: pointer; transition: transform 0.1s; position: relative;
+            background-size: cover; image-rendering: pixelated;
+        }
+        .inv-slot:hover { transform: scale(1.1); }
+        .inv-slot.selected { border-color: white; box-shadow: 0 0 10px white; transform: scale(1.15); }
+        .slot-num { position: absolute; top: 2px; left: 4px; color: white; font-weight: bold; text-shadow: 1px 1px 0 #000; font-size: 12px; }
 
-        /* Pad Positions */
-        .pad-left { left: 10px; bottom: 10px; }
-        .pad-right { right: 10px; bottom: 10px; }
+        /* --- MOBILE CONTROLS --- */
+        .control-layer { position: absolute; bottom: 80px; width: 100%; height: 150px; pointer-events: none; z-index: 20; display: flex; justify-content: space-between; padding: 0 20px; box-sizing: border-box; }
+        .d-pad { position: relative; width: 120px; height: 120px; pointer-events: auto; background: rgba(0,0,0,0.1); border-radius: 50%; }
+        .btn { background: rgba(255, 255, 255, 0.2); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: white; font-weight: bold; display: flex; align-items: center; justify-content: center; position: absolute; cursor: pointer; backdrop-filter: blur(4px); }
         
-        /* Button Mapping */
-        .btn-u { top: 0; left: 45px; width: 50px; height: 45px; }
-        .btn-d { bottom: 0; left: 45px; width: 50px; height: 45px; }
-        .btn-l { top: 45px; left: 0; width: 45px; height: 50px; }
-        .btn-r { top: 45px; right: 0; width: 45px; height: 50px; }
-
-        /* Actions */
-        .action-bar { position: absolute; bottom: 160px; right: 20px; display: flex; gap: 10px; pointer-events: auto; }
-        .btn-action { width: 60px; height: 60px; position: relative; border-radius: 50%; font-size: 12px; text-align: center; }
-        .btn-break { background: rgba(255, 50, 50, 0.4); }
-        .btn-build { background: rgba(50, 255, 100, 0.4); }
-        .btn-jump { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); width: 80px; height: 50px; pointer-events: auto; background: rgba(255, 200, 0, 0.4); }
+        /* Button Positions */
+        .btn-u { top: 0; left: 35px; width: 50px; height: 35px; }
+        .btn-d { bottom: 0; left: 35px; width: 50px; height: 35px; }
+        .btn-l { top: 35px; left: 0; width: 35px; height: 50px; }
+        .btn-r { top: 35px; right: 0; width: 35px; height: 50px; }
+        .btn-jump { position: absolute; bottom: 100px; right: 20px; width: 80px; height: 80px; border-radius: 50%; background: rgba(255, 200, 0, 0.4); pointer-events: auto; display:flex; align-items:center; justify-content:center; color:white; font-weight:bold; }
     </style>
 </head>
 <body>
     <div id="hud">
-        <h3>NanoCraft 0.4 (Physics)</h3>
-        <div>Gravity: ON | Collision: ON</div>
+        <h3>NanoCraft 0.5 (Textures)</h3>
+        KEYS: 1-5 to Switch | Click to Build/Break<br>
         Blocks: <span id="block-count">0</span>
     </div>
     <div id="crosshair"></div>
 
+    <!-- INVENTORY UI -->
+    <div id="inventory"></div>
+
+    <!-- MOBILE CONTROLS -->
     <div class="control-layer">
-        <!-- Movement -->
-        <div class="d-pad pad-left">
+        <div class="d-pad">
             <div class="btn btn-u" id="btn-w">W</div>
             <div class="btn btn-l" id="btn-a">A</div>
             <div class="btn btn-r" id="btn-d">D</div>
             <div class="btn btn-d" id="btn-s">S</div>
         </div>
-
-        <div class="btn btn-jump" id="btn-space">JUMP</div>
-
-        <!-- Look -->
-        <div class="d-pad pad-right">
-            <div class="btn btn-u" id="btn-up" style="border-color:gold">↑</div>
-            <div class="btn btn-l" id="btn-left" style="border-color:gold">←</div>
-            <div class="btn btn-r" id="btn-right" style="border-color:gold">→</div>
-            <div class="btn btn-d" id="btn-down" style="border-color:gold">↓</div>
-        </div>
-        
-        <div class="action-bar">
-            <div class="btn btn-action btn-break" id="btn-break">BREAK</div>
-            <div class="btn btn-action btn-build" id="btn-build">BUILD</div>
-        </div>
+        <div class="btn-jump" id="btn-space">JUMP</div>
     </div>
 
     <script type="importmap">
@@ -79,196 +66,272 @@
     <script type="module">
         import * as THREE from 'three';
 
-        // --- CONFIGURATION ---
-        const WORLD_SIZE = 24;
-        const GRAVITY = 0.02;
-        const JUMP_FORCE = 0.4;
-        const MOVE_SPEED = 0.15;
-        
-        // --- DATA STRUCTURES ---
-        // 'x,y,z' -> instanceId (Used for Collision AND Modification)
-        const world = new Map(); 
+        // --- 1. DATA DRIVEN CONFIGURATION (The "JSON" File) ---
+        // In a real app, you would fetch this from a .json file
+        const BLOCK_MANIFEST = [
+            { id: 'grass', name: 'Grass', color: '#4C9A2A', type: 'natural' },
+            { id: 'dirt',  name: 'Dirt',  color: '#5D4037', type: 'natural' },
+            { id: 'stone', name: 'Stone', color: '#757575', type: 'natural' },
+            { id: 'wood',  name: 'Wood',  color: '#5D4037', type: 'manufactured' },
+            { id: 'brick', name: 'Brick', color: '#A93226', type: 'manufactured' }
+        ];
 
-        // --- SETUP ---
+        // --- 2. PROCEDURAL TEXTURE GENERATOR ---
+        // Creates distinct textures on the fly so we don't need external image files
+        function createTexture(type, colorHex) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 64; canvas.height = 64;
+            const ctx = canvas.getContext('2d');
+            
+            // Base Color
+            ctx.fillStyle = colorHex;
+            ctx.fillRect(0, 0, 64, 64);
+            
+            // Noise / Pattern Overlay
+            ctx.fillStyle = 'rgba(0,0,0,0.2)';
+            if (type === 'natural') {
+                // Random Noise
+                for(let i=0; i<400; i++) {
+                    ctx.fillRect(Math.random()*64, Math.random()*64, 2, 2);
+                }
+            } else if (type === 'manufactured') {
+                // Brick Pattern
+                for(let y=0; y<64; y+=16) {
+                    for(let x=0; x<64; x+=16) {
+                        ctx.strokeRect(x, y, 16, 10);
+                    }
+                }
+                ctx.strokeRect(0,0,64,64); // Border
+            }
+            
+            const tex = new THREE.CanvasTexture(canvas);
+            tex.magFilter = THREE.NearestFilter; // Pixelated look
+            return { tex, url: canvas.toDataURL() };
+        }
+
+        // --- 3. ENGINE STATE ---
+        const WORLD_SIZE = 24;
+        const CHUNK_CAPACITY = 4000; // Max blocks per type
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x87CEEB);
+        scene.fog = new THREE.Fog(0x87CEEB, 10, 40);
+
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: false });
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
-        const ambient = new THREE.AmbientLight(0xaaaaaa);
-        const sun = new THREE.DirectionalLight(0xffffff, 1.2);
+        // Lighting
+        const ambient = new THREE.AmbientLight(0xffffff, 0.6);
+        const sun = new THREE.DirectionalLight(0xffffff, 0.8);
         sun.position.set(50, 100, 50);
         scene.add(ambient, sun);
 
-        // --- GENERATION ---
+        // --- 4. BLOCK REGISTRY & MESH GENERATION ---
+        const blockMeshes = {}; // Map<id, InstancedMesh>
+        const worldData = new Map(); // "x,y,z" -> { id, index }
+        const activePools = {}; // Tracks next free index for each mesh
+
         const geometry = new THREE.BoxGeometry(1, 1, 1);
-        const material = new THREE.MeshStandardMaterial({ color: 0x5da644 });
-        const maxInstances = WORLD_SIZE * WORLD_SIZE * 10;
-        const mesh = new THREE.InstancedMesh(geometry, material, maxInstances);
-        scene.add(mesh);
-
         const dummy = new THREE.Object3D();
-        let count = 0;
 
-        function addBlock(x, y, z) {
-            const key = `${x},${y},${z}`;
-            if (world.has(key)) return; // Already exists
+        // Initialize Meshes based on JSON
+        const inventoryEl = document.getElementById('inventory');
+        let selectedBlockId = BLOCK_MANIFEST[0].id;
 
-            dummy.position.set(x, y, z);
-            dummy.scale.set(1, 1, 1);
-            dummy.updateMatrix();
-            mesh.setMatrixAt(count, dummy.matrix);
+        BLOCK_MANIFEST.forEach((block, index) => {
+            // 1. Create Material
+            const { tex, url } = createTexture(block.type, block.color);
+            const material = new THREE.MeshStandardMaterial({ map: tex });
             
-            world.set(key, count); // Register block for physics
-            count++;
-        }
+            // 2. Create Mesh
+            const mesh = new THREE.InstancedMesh(geometry, material, CHUNK_CAPACITY);
+            mesh.name = block.id;
+            scene.add(mesh);
+            
+            blockMeshes[block.id] = mesh;
+            activePools[block.id] = 0;
 
-        // Generate Terrain
-        for (let x = -WORLD_SIZE/2; x < WORLD_SIZE/2; x++) {
-            for (let z = -WORLD_SIZE/2; z < WORLD_SIZE/2; z++) {
-                const h = Math.floor(Math.sin(x * 0.2) * 3 + Math.cos(z * 0.2) * 3);
-                // Fill column so we don't see under the world
-                for (let y = -5; y <= h; y++) addBlock(x, y, z);
+            // 3. Create Inventory UI
+            const slot = document.createElement('div');
+            slot.className = 'inv-slot';
+            if(index === 0) slot.classList.add('selected');
+            slot.style.backgroundImage = `url(${url})`; // Show generated texture
+            slot.innerHTML = `<span class="slot-num">${index+1}</span>`;
+            slot.onclick = () => selectBlock(block.id, slot);
+            inventoryEl.appendChild(slot);
+        });
+
+        function selectBlock(id, uiElement) {
+            selectedBlockId = id;
+            document.querySelectorAll('.inv-slot').forEach(el => el.classList.remove('selected'));
+            if(uiElement) uiElement.classList.add('selected');
+            else {
+                // Find by ID if triggered by keyboard
+                const idx = BLOCK_MANIFEST.findIndex(b => b.id === id);
+                inventoryEl.children[idx].classList.add('selected');
             }
         }
-        mesh.instanceMatrix.needsUpdate = true;
-        document.getElementById('block-count').innerText = count;
 
-        // --- PHYSICS ENGINE ---
-        camera.position.set(0, 10, 0);
-        const velocity = new THREE.Vector3();
-        let onGround = false;
+        // --- 5. WORLD MANAGEMENT ---
+        function setBlock(x, y, z, typeId, active = true) {
+            const key = `${x},${y},${z}`;
+            
+            // Remove existing if present
+            if (worldData.has(key)) {
+                const prev = worldData.get(key);
+                const prevMesh = blockMeshes[prev.id];
+                
+                // We can't easily delete from InstancedMesh, so we scale it to 0 (Hide it)
+                // A real engine would swap with the last element to reclaim memory ("Swap & Pop")
+                const mat = new THREE.Matrix4();
+                prevMesh.getMatrixAt(prev.index, mat);
+                mat.elements[0] = 0; mat.elements[5] = 0; mat.elements[10] = 0; 
+                prevMesh.setMatrixAt(prev.index, mat);
+                prevMesh.instanceMatrix.needsUpdate = true;
+                
+                worldData.delete(key);
+            }
 
-        function checkCollision(pos) {
-            // Convert float position to integer grid coordinate
-            const x = Math.round(pos.x);
-            const y = Math.round(pos.y);
-            const z = Math.round(pos.z);
-            return world.has(`${x},${y},${z}`);
+            if (active && typeId) {
+                const mesh = blockMeshes[typeId];
+                const index = activePools[typeId];
+                
+                if (index >= CHUNK_CAPACITY) { console.warn("Chunk Full!"); return; }
+                
+                dummy.position.set(x, y, z);
+                dummy.scale.set(1, 1, 1);
+                dummy.updateMatrix();
+                
+                mesh.setMatrixAt(index, dummy.matrix);
+                mesh.instanceMatrix.needsUpdate = true;
+                
+                worldData.set(key, { id: typeId, index: index });
+                activePools[typeId]++;
+            }
+            updateCount();
         }
 
-        // --- CONTROLS INPUT ---
-        const input = { w:0, a:0, s:0, d:0, lU:0, lD:0, lL:0, lR:0, sp:0 };
-        const bind = (id, k) => {
-            const el = document.getElementById(id);
-            const start = (e) => { e.preventDefault(); input[k] = 1; el.style.background='rgba(255,255,255,0.5)'; };
-            const end = (e) => { e.preventDefault(); input[k] = 0; el.style.background=''; };
-            el.addEventListener('touchstart', start); el.addEventListener('touchend', end);
-            el.addEventListener('mousedown', start); el.addEventListener('mouseup', end);
-        };
-        bind('btn-w','w'); bind('btn-s','s'); bind('btn-a','a'); bind('btn-d','d');
-        bind('btn-up','lU'); bind('btn-down','lD'); bind('btn-left','lL'); bind('btn-right','lR');
-        bind('btn-space','sp');
+        function updateCount() {
+            document.getElementById('block-count').innerText = worldData.size;
+        }
 
-        // Keyboard
-        document.addEventListener('keydown', e => {
-            if(e.key==='w')input.w=1; if(e.key==='s')input.s=1; if(e.key==='a')input.a=1; if(e.key==='d')input.d=1; if(e.key===' ')input.sp=1;
-        });
-        document.addEventListener('keyup', e => {
-            if(e.key==='w')input.w=0; if(e.key==='s')input.s=0; if(e.key==='a')input.a=0; if(e.key==='d')input.d=0; if(e.key===' ')input.sp=0;
-        });
+        // Terrain Gen
+        for (let x = -WORLD_SIZE/2; x < WORLD_SIZE/2; x++) {
+            for (let z = -WORLD_SIZE/2; z < WORLD_SIZE/2; z++) {
+                const h = Math.floor(Math.sin(x * 0.2) * 2 + Math.cos(z * 0.2) * 2);
+                // Top layer Grass, below Dirt, bottom Stone
+                setBlock(x, h, z, 'grass');
+                setBlock(x, h-1, z, 'dirt');
+                for(let d=2; d<4; d++) setBlock(x, h-d, z, 'stone');
+            }
+        }
 
-        // --- BUILD / BREAK ---
+        // --- 6. INTERACTION & PHYSICS ---
         const raycaster = new THREE.Raycaster();
-        const center = new THREE.Vector2(0,0);
-        const matrix = new THREE.Matrix4();
+        const center = new THREE.Vector2(0, 0);
 
         function getTarget() {
             raycaster.setFromCamera(center, camera);
-            const hits = raycaster.intersectObject(mesh);
-            if (hits.length > 0) {
-                const hit = hits[0];
-                // Get integer coords of the block we hit
+            // Check against ALL block meshes
+            const meshes = Object.values(blockMeshes);
+            const intersects = raycaster.intersectObjects(meshes);
+            
+            if (intersects.length > 0) {
+                const hit = intersects[0];
                 const x = Math.round(hit.point.x - hit.face.normal.x * 0.1);
                 const y = Math.round(hit.point.y - hit.face.normal.y * 0.1);
                 const z = Math.round(hit.point.z - hit.face.normal.z * 0.1);
-                return { id: hit.instanceId, pos: new THREE.Vector3(x, y, z), normal: hit.face.normal };
+                return { x, y, z, normal: hit.face.normal };
             }
             return null;
         }
 
-        document.getElementById('btn-break').addEventListener('click', (e) => {
-            e.preventDefault();
+        // Mouse Controls
+        document.addEventListener('mousedown', (e) => {
+            if (document.pointerLockElement !== document.body) {
+                if(e.target.tagName === "CANVAS") document.body.requestPointerLock();
+                return;
+            }
             const target = getTarget();
-            if (target) {
-                // Hide Visual
-                mesh.getMatrixAt(target.id, matrix);
-                matrix.elements[0] = 0; // Scale to 0
-                mesh.setMatrixAt(target.id, matrix);
-                mesh.instanceMatrix.needsUpdate = true;
+            if (!target) return;
+
+            if (e.button === 0) { // Left Click: Break
+                setBlock(target.x, target.y, target.z, null); // Remove
+            } 
+            else if (e.button === 2) { // Right Click: Build
+                const bx = target.x + target.normal.x;
+                const by = target.y + target.normal.y;
+                const bz = target.z + target.normal.z;
+                // Prevent building inside self
+                const playerPos = camera.position;
+                if (Math.abs(bx - playerPos.x) < 0.8 && Math.abs(by - playerPos.y + 1) < 1.8 && Math.abs(bz - playerPos.z) < 0.8) return;
                 
-                // Remove from Physics
-                world.delete(`${target.pos.x},${target.pos.y},${target.pos.z}`);
+                setBlock(bx, by, bz, selectedBlockId);
             }
         });
 
-        document.getElementById('btn-build').addEventListener('click', (e) => {
-            e.preventDefault();
-            const target = getTarget();
-            if (target) {
-                const pos = target.pos.clone().add(target.normal);
-                addBlock(pos.x, pos.y, pos.z);
-                mesh.instanceMatrix.needsUpdate = true;
+        // Keyboard Select (1-5)
+        document.addEventListener('keydown', (e) => {
+            const key = parseInt(e.key);
+            if (key > 0 && key <= BLOCK_MANIFEST.length) {
+                selectBlock(BLOCK_MANIFEST[key-1].id);
             }
         });
 
-        // --- GAME LOOP ---
+        // --- PHYSICS LOOP ---
+        const velocity = new THREE.Vector3();
+        const input = { w:0, a:0, s:0, d:0, sp:0 };
+        camera.position.set(0, 10, 0);
+
+        // Basic controls binding (same as previous)
+        const bind = (id, k) => {
+            const el = document.getElementById(id);
+            el.addEventListener('touchstart', e=>{e.preventDefault();input[k]=1});
+            el.addEventListener('touchend', e=>{e.preventDefault();input[k]=0});
+        };
+        bind('btn-w','w'); bind('btn-s','s'); bind('btn-a','a'); bind('btn-d','d'); bind('btn-space','sp');
+        
+        document.addEventListener('keydown', e=>{ if(e.key==='w')input.w=1;if(e.key==='s')input.s=1;if(e.key==='a')input.a=1;if(e.key==='d')input.d=1;if(e.key===' ')input.sp=1; });
+        document.addEventListener('keyup', e=>{ if(e.key==='w')input.w=0;if(e.key==='s')input.s=0;if(e.key==='a')input.a=0;if(e.key==='d')input.d=0;if(e.key===' ')input.sp=0; });
+        document.addEventListener('mousemove', e => {
+            if(document.pointerLockElement===document.body){
+                camera.rotation.y-=e.movementX*0.002; camera.rotation.x-=e.movementY*0.002;
+            }
+        });
+
         function animate() {
             requestAnimationFrame(animate);
 
-            // 1. Camera Rotation
-            if(input.lL) camera.rotation.y += 0.04;
-            if(input.lR) camera.rotation.y -= 0.04;
-            if(input.lU) camera.rotation.x += 0.04;
-            if(input.lD) camera.rotation.x -= 0.04;
+            // Movement
+            const fwd = new THREE.Vector3(0,0,-1).applyQuaternion(camera.quaternion); fwd.y=0; fwd.normalize();
+            const right = new THREE.Vector3(1,0,0).applyQuaternion(camera.quaternion); right.y=0; right.normalize();
+            const speed = 0.15;
+            if(input.w) camera.position.add(fwd.multiplyScalar(speed));
+            if(input.s) camera.position.add(fwd.multiplyScalar(-speed));
+            if(input.a) camera.position.add(right.multiplyScalar(-speed));
+            if(input.d) camera.position.add(right.multiplyScalar(speed));
 
-            // 2. Horizontal Movement
-            const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
-            forward.y = 0; forward.normalize();
-            const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
-            right.y = 0; right.normalize();
-
-            if(input.w) camera.position.add(forward.multiplyScalar(MOVE_SPEED));
-            if(input.s) camera.position.add(forward.multiplyScalar(-MOVE_SPEED));
-            if(input.a) camera.position.add(right.multiplyScalar(-MOVE_SPEED));
-            if(input.d) camera.position.add(right.multiplyScalar(MOVE_SPEED));
-
-            // 3. Vertical Physics (Gravity)
-            velocity.y -= GRAVITY;
-            
-            // Check "Next" Position
+            // Gravity
+            velocity.y -= 0.025;
             const nextY = camera.position.y + velocity.y;
-            
-            // FEET Check (1.5 units below camera)
-            const feetPos = new THREE.Vector3(camera.position.x, nextY - 1.5, camera.position.z);
-            
-            if (checkCollision(feetPos)) {
-                // HIT GROUND
+            const feetX = Math.round(camera.position.x);
+            const feetZ = Math.round(camera.position.z);
+            const feetY = Math.round(nextY - 1.5); // 1.5 is eye height
+
+            if (worldData.has(`${feetX},${feetY},${feetZ}`)) {
                 velocity.y = 0;
-                onGround = true;
-                // Snap to top of block (Integer Y + 0.5 block size + 1.5 eye height)
-                camera.position.y = Math.round(feetPos.y) + 0.5 + 1.5; 
+                camera.position.y = feetY + 0.5 + 1.5;
+                if(input.sp) velocity.y = 0.45;
             } else {
-                // FALLING
-                onGround = false;
                 camera.position.y = nextY;
             }
-
-            // Jump
-            if (input.sp && onGround) {
-                velocity.y = JUMP_FORCE;
-                onGround = false;
-            }
-            
-            // World Floor Safety
-            if(camera.position.y < -10) { camera.position.set(0, 10, 0); velocity.y = 0; }
+            if(camera.position.y < -20) { camera.position.set(0,20,0); velocity.y=0; } // Reset
 
             renderer.render(scene, camera);
         }
         animate();
-        
+
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
