@@ -3,13 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>NanoCraft 1.0 Survival</title>
+    <title>NanoCraft 1.1</title>
     <style>
         body { margin: 0; overflow: hidden; background: #87CEEB; font-family: 'Courier New', monospace; user-select: none; -webkit-user-select: none; }
         #hud { position: absolute; top: 10px; left: 10px; color: white; text-shadow: 2px 2px 0 #000; pointer-events: none; z-index: 10; }
         #crosshair { position: absolute; top: 50%; left: 50%; width: 20px; height: 20px; border: 2px solid white; transform: translate(-50%, -50%); border-radius: 50%; pointer-events: none; z-index: 10; mix-blend-mode: difference; }
         
-        /* --- DYNAMIC INVENTORY --- */
+        /* --- SAVE UI --- */
+        #save-status { margin-top: 5px; font-size: 12px; color: #FFFF00; }
+        .menu-btn { pointer-events: auto; background: #444; color: white; border: 1px solid white; padding: 5px 10px; cursor: pointer; font-family: inherit; }
+        .menu-btn:hover { background: #666; }
+
+        /* --- INVENTORY --- */
         #inventory {
             position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
             display: flex; gap: 6px; background: rgba(0,0,0,0.6); padding: 6px; border-radius: 12px;
@@ -21,16 +26,10 @@
             transition: transform 0.1s, border-color 0.1s; background-color: rgba(0,0,0,0.3);
         }
         .inv-slot.selected { border-color: #fff; box-shadow: 0 0 8px white; transform: scale(1.15); z-index: 41; }
-        
-        /* Count Badge */
         .slot-count {
-            position: absolute; bottom: -2px; right: 2px; 
-            color: white; font-size: 12px; font-weight: bold; 
-            text-shadow: 1px 1px 0 #000, -1px -1px 0 #000;
+            position: absolute; bottom: -2px; right: 2px; color: white; font-size: 12px; 
+            font-weight: bold; text-shadow: 1px 1px 0 #000, -1px -1px 0 #000;
         }
-        /* Empty State Message */
-        .empty-msg { color: #aaa; font-size: 10px; align-self: center; display: none; }
-        #inventory:empty + .empty-msg { display: block; }
 
         /* --- CONTROLS --- */
         .control-layer { position: absolute; bottom: 70px; width: 100%; height: 160px; pointer-events: none; z-index: 20; }
@@ -53,8 +52,9 @@
 </head>
 <body>
     <div id="hud">
-        <h3>NanoCraft 1.0</h3>
-        Mode: Survival | Break blocks to get items!
+        <h3>NanoCraft 1.1</h3>
+        <button class="menu-btn" onclick="resetWorld()">Reset World</button>
+        <div id="save-status">Auto-saving...</div>
     </div>
     <div id="crosshair"></div>
 
@@ -87,7 +87,8 @@
     <script type="module">
         import * as THREE from 'three';
 
-        // --- 1. BLOCK CONFIGURATION ---
+        // --- 1. CONFIGURATION (JSON Data) ---
+        
         const BLOCK_MANIFEST = [
             { id: 'grass', color: '#5fab3b', type: 'natural' },
             { id: 'dirt',  color: '#5D4037', type: 'natural' },
@@ -99,6 +100,32 @@
             { id: 'snow',  color: '#FFFFFF', type: 'natural' }
         ];
 
+        // NEW: Entity Definitions
+        const ENTITY_MANIFEST = {
+            'zombie': { color: '#2E8B57', speed: 0.03, hp: 20, width: 0.6, height: 1.8, ai: 'chase' },
+            'pig':    { color: '#FFC0CB', speed: 0.02, hp: 10, width: 0.8, height: 0.8, ai: 'wander' },
+            'enderman': { color: '#000000', speed: 0.1, hp: 40, width: 0.5, height: 2.8, ai: 'wander' }
+        };
+
+        // --- 2. ENGINE CORE ---
+        const WORLD_SIZE = 24;
+        const CHUNK_CAPACITY = 4000;
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x87CEEB);
+        scene.fog = new THREE.Fog(0x87CEEB, 10, 40);
+        
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+        camera.rotation.order = 'YXZ';
+        const renderer = new THREE.WebGLRenderer({ antialias: false });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        const ambient = new THREE.AmbientLight(0xffffff, 0.7);
+        const sun = new THREE.DirectionalLight(0xffffff, 0.8);
+        sun.position.set(50, 100, 50);
+        scene.add(ambient, sun);
+
+        // --- 3. TEXTURE & MESH GEN ---
         function createTexture(type, colorHex) {
             const c = document.createElement('canvas');
             c.width = 64; c.height = 64;
@@ -114,27 +141,8 @@
             return { tex, url: c.toDataURL() };
         }
 
-        // --- 2. ENGINE SETUP ---
-        const WORLD_SIZE = 24;
-        const CHUNK_CAPACITY = 3000;
-        const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x87CEEB);
-        scene.fog = new THREE.Fog(0x87CEEB, 10, 40);
-
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.rotation.order = 'YXZ';
-        const renderer = new THREE.WebGLRenderer({ antialias: false });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        document.body.appendChild(renderer.domElement);
-
-        const ambient = new THREE.AmbientLight(0xffffff, 0.7);
-        const sun = new THREE.DirectionalLight(0xffffff, 0.8);
-        sun.position.set(50, 100, 50);
-        scene.add(ambient, sun);
-
-        // --- 3. MESH GENERATION ---
         const blockMeshes = {};
-        const blockMeta = {}; // Stores Texture URLs for UI
+        const blockMeta = {};
         const activePools = {};
         const dummy = new THREE.Object3D();
 
@@ -144,142 +152,215 @@
             const mesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1), mat, CHUNK_CAPACITY);
             scene.add(mesh);
             blockMeshes[b.id] = mesh;
-            blockMeta[b.id] = { url }; // Save for UI
+            blockMeta[b.id] = { url };
             activePools[b.id] = 0;
         });
 
-        // --- 4. SURVIVAL INVENTORY SYSTEM ---
-        // 'grass': 5, 'stone': 10
-        const playerInventory = { 'brick': 64, 'plank': 32, 'glass': 10 }; // Starter Kit
-        let selectedBlockId = 'brick';
+        // --- 4. SAVE/LOAD SYSTEM ---
+        const worldData = new Map(); // State of the world
+        let playerInventory = { 'brick': 10, 'plank': 10 };
         
-        const invEl = document.getElementById('inventory');
+        function saveGame() {
+            const saveObj = {
+                blocks: Array.from(worldData.entries()), // Convert Map to Array
+                inventory: playerInventory,
+                pos: { x: camera.position.x, y: camera.position.y, z: camera.position.z },
+                rot: { x: camera.rotation.x, y: camera.rotation.y }
+            };
+            localStorage.setItem('nanocraft_save', JSON.stringify(saveObj));
+            const status = document.getElementById('save-status');
+            status.innerText = "Saved!";
+            setTimeout(()=> status.innerText = "", 2000);
+        }
+
+        function loadGame() {
+            const data = localStorage.getItem('nanocraft_save');
+            if(data) {
+                const saveObj = JSON.parse(data);
+                // Restore Inventory
+                playerInventory = saveObj.inventory || {};
+                // Restore Position
+                if(saveObj.pos) camera.position.set(saveObj.pos.x, saveObj.pos.y, saveObj.pos.z);
+                if(saveObj.rot) { camera.rotation.x = saveObj.rot.x; camera.rotation.y = saveObj.rot.y; }
+                
+                // Restore Blocks
+                // Clear current
+                Object.values(activePools).forEach((_, k) => activePools[k] = 0);
+                
+                saveObj.blocks.forEach(([key, val]) => {
+                   const [x,y,z] = key.split(',').map(Number);
+                   spawnBlockVisual(x, y, z, val.id);
+                });
+                return true;
+            }
+            return false;
+        }
+
+        window.resetWorld = () => {
+            localStorage.removeItem('nanocraft_save');
+            location.reload();
+        }
+
+        // Auto-Save Loop
+        setInterval(saveGame, 5000);
+
+        // --- 5. INVENTORY UI ---
+        const inventoryEl = document.getElementById('inventory');
+        let selectedBlockId = null;
 
         function renderInventory() {
-            invEl.innerHTML = '';
+            inventoryEl.innerHTML = '';
             const items = Object.keys(playerInventory);
-            
-            if(items.length === 0) {
-                invEl.innerHTML = '<div style="color:white; font-size:12px; margin-top:15px;">Inventory Empty<br>Break blocks!</div>';
-                selectedBlockId = null;
-                return;
-            }
-
-            // Auto-select first item if current selection is invalid
+            if(items.length === 0) { selectedBlockId = null; return; }
             if(!playerInventory[selectedBlockId]) selectedBlockId = items[0];
 
             items.forEach(id => {
-                const count = playerInventory[id];
-                const meta = blockMeta[id];
-                
                 const slot = document.createElement('div');
                 slot.className = 'inv-slot';
                 if(id === selectedBlockId) slot.classList.add('selected');
-                slot.style.backgroundImage = `url(${meta.url})`;
-                
-                // Count Badge
-                slot.innerHTML = `<div class="slot-count">${count}</div>`;
-                
-                slot.onclick = () => {
-                    selectedBlockId = id;
-                    renderInventory(); // Re-render to update selection border
-                };
-                invEl.appendChild(slot);
+                slot.style.backgroundImage = `url(${blockMeta[id].url})`;
+                slot.innerHTML = `<div class="slot-count">${playerInventory[id]}</div>`;
+                slot.onclick = () => { selectedBlockId = id; renderInventory(); };
+                inventoryEl.appendChild(slot);
             });
         }
 
-        function modifyInventory(id, amount) {
+        function modifyInventory(id, amt) {
             if(!id) return;
             if(!playerInventory[id]) playerInventory[id] = 0;
-            
-            playerInventory[id] += amount;
-            
-            if(playerInventory[id] <= 0) {
-                delete playerInventory[id];
-            }
+            playerInventory[id] += amt;
+            if(playerInventory[id] <= 0) delete playerInventory[id];
             renderInventory();
         }
 
-        // Initial Render
-        renderInventory();
-
-        // --- 5. WORLD DATA & LOGIC ---
-        const worldData = new Map(); // "x,y,z" -> { id, idx }
+        // --- 6. WORLD LOGIC ---
+        function spawnBlockVisual(x, y, z, id) {
+            const mesh = blockMeshes[id];
+            const idx = activePools[id]++;
+            if(idx >= CHUNK_CAPACITY) return; // Limit reached
+            
+            dummy.position.set(x, y, z);
+            dummy.scale.set(1,1,1);
+            dummy.updateMatrix();
+            mesh.setMatrixAt(idx, dummy.matrix);
+            mesh.instanceMatrix.needsUpdate = true;
+            worldData.set(`${x},${y},${z}`, { id, idx });
+        }
 
         function setBlock(x, y, z, id) {
             const key = `${x},${y},${z}`;
-            
-            // BREAKING (Removing old)
+            // Break
             if(worldData.has(key)) {
                 const prev = worldData.get(key);
-                // Hide block
                 const pm = blockMeshes[prev.id];
                 const mat = new THREE.Matrix4();
                 pm.getMatrixAt(prev.idx, mat);
-                mat.elements[0]=0; mat.elements[5]=0; mat.elements[10]=0;
+                mat.elements[0]=0; // Scale 0 (Hide)
                 pm.setMatrixAt(prev.idx, mat);
                 pm.instanceMatrix.needsUpdate = true;
-                
                 worldData.delete(key);
-                
-                // Add to inventory (Survival Mechanic)
                 modifyInventory(prev.id, 1);
             }
-
-            // BUILDING (Adding new)
-            if(id) {
-                // Check if player has item
-                if (!playerInventory[id] || playerInventory[id] <= 0) return;
-
-                const mesh = blockMeshes[id];
-                const idx = activePools[id]++;
-                
-                if(idx < CHUNK_CAPACITY) {
-                    dummy.position.set(x,y,z);
-                    dummy.scale.set(1,1,1);
-                    dummy.updateMatrix();
-                    mesh.setMatrixAt(idx, dummy.matrix);
-                    mesh.instanceMatrix.needsUpdate = true;
-                    worldData.set(key, { id, idx });
-                    
-                    // Remove from inventory
-                    modifyInventory(id, -1);
-                }
+            // Build
+            if(id && playerInventory[id] > 0) {
+                spawnBlockVisual(x, y, z, id);
+                modifyInventory(id, -1);
             }
-            // Stats
-            // document.getElementById('block-count').innerText = worldData.size;
         }
 
-        // Terrain Generation (No inventory cost)
-        function generateTerrain() {
+        // Init
+        if(!loadGame()) {
+            // Generate Fresh World if no save
             for(let x=-WORLD_SIZE/2; x<WORLD_SIZE/2; x++) {
                 for(let z=-WORLD_SIZE/2; z<WORLD_SIZE/2; z++) {
                     const h = Math.floor(Math.sin(x*0.2)*2 + Math.cos(z*0.2)*2);
-                    
-                    // We bypass setBlock here to avoid modifying inventory during gen
-                    const place = (bx, by, bz, bid) => {
-                        const idx = activePools[bid]++;
-                        dummy.position.set(bx,by,bz);
-                        dummy.scale.set(1,1,1);
-                        dummy.updateMatrix();
-                        blockMeshes[bid].setMatrixAt(idx, dummy.matrix);
-                        worldData.set(`${bx},${by},${bz}`, { id: bid, idx });
-                    };
-
-                    place(x, h, z, 'grass');
-                    place(x, h-1, z, 'dirt');
-                    place(x, h-2, z, 'stone');
+                    spawnBlockVisual(x, h, z, 'grass');
+                    spawnBlockVisual(x, h-1, z, 'dirt');
+                    spawnBlockVisual(x, h-2, z, 'stone');
                 }
             }
-            // Update all meshes
-            Object.values(blockMeshes).forEach(m => m.instanceMatrix.needsUpdate = true);
+            // Add Entities
+            spawnEntity('pig', 0, 10, 0);
+            spawnEntity('zombie', 5, 10, 5);
         }
-        generateTerrain();
+        renderInventory();
 
-        // --- 6. INTERACTION ---
+        // --- 7. ENTITY SYSTEM ---
+        const entities = [];
+        const entityGeo = new THREE.BoxGeometry(1, 1, 1);
+
+        function spawnEntity(type, x, y, z) {
+            const data = ENTITY_MANIFEST[type];
+            if(!data) return;
+
+            const mat = new THREE.MeshStandardMaterial({ color: data.color });
+            const mesh = new THREE.Mesh(entityGeo, mat);
+            mesh.scale.set(data.width, data.height, data.width);
+            mesh.position.set(x, y, z);
+            scene.add(mesh);
+
+            entities.push({
+                mesh: mesh,
+                type: type,
+                velocity: new THREE.Vector3(0, 0, 0),
+                data: data,
+                timer: 0
+            });
+        }
+
+        function updateEntities() {
+            entities.forEach(e => {
+                // 1. Gravity
+                e.velocity.y -= 0.02;
+                const nextY = e.mesh.position.y + e.velocity.y;
+                
+                // 2. Floor Collision
+                const feetY = Math.round(nextY - (e.data.height/2));
+                const bx = Math.round(e.mesh.position.x);
+                const bz = Math.round(e.mesh.position.z);
+                
+                if(worldData.has(`${bx},${feetY},${bz}`)) {
+                    e.velocity.y = 0;
+                    e.mesh.position.y = feetY + 0.5 + (e.data.height/2);
+                    // Friction
+                    e.velocity.x *= 0.8;
+                    e.velocity.z *= 0.8;
+                } else {
+                    e.mesh.position.y = nextY;
+                }
+
+                // 3. AI Behavior
+                if(Math.random() < 0.02) { // Change decision randomly
+                    if(e.data.ai === 'wander') {
+                        e.velocity.x = (Math.random()-0.5) * e.data.speed * 5;
+                        e.velocity.z = (Math.random()-0.5) * e.data.speed * 5;
+                        if(Math.random() < 0.3 && e.velocity.y === 0) e.velocity.y = 0.3; // Jump
+                    } else if(e.data.ai === 'chase') {
+                        const dx = camera.position.x - e.mesh.position.x;
+                        const dz = camera.position.z - e.mesh.position.z;
+                        const dist = Math.sqrt(dx*dx + dz*dz);
+                        if(dist < 10) {
+                            e.velocity.x = (dx/dist) * e.data.speed;
+                            e.velocity.z = (dz/dist) * e.data.speed;
+                        }
+                    }
+                }
+                
+                // Apply Move
+                e.mesh.position.x += e.velocity.x;
+                e.mesh.position.z += e.velocity.z;
+                e.mesh.rotation.y = Math.atan2(e.velocity.x, e.velocity.z); // Face direction
+                
+                // Remove if fell out of world
+                if(e.mesh.position.y < -20) {
+                    e.mesh.position.set(0, 15, 0);
+                    e.velocity.set(0,0,0);
+                }
+            });
+        }
+
+        // --- 8. CONTROLS & RENDER ---
         const input = { w:0, a:0, s:0, d:0, sp:0, lU:0, lD:0, lL:0, lR:0 };
-        
-        // Input Bindings (Same as before)
         const bind = (id, k) => {
             const el = document.getElementById(id);
             const on = (e)=>{e.preventDefault(); input[k]=1; el.style.background='rgba(255,255,255,0.5)';};
@@ -302,58 +383,56 @@
                 const y = Math.round(hit.point.y - hit.face.normal.y*0.1);
                 const z = Math.round(hit.point.z - hit.face.normal.z*0.1);
                 
-                if(mode === 'break') {
-                    setBlock(x, y, z, null); // Break -> Adds to inv
-                } else if(mode === 'build' && selectedBlockId) {
+                if(mode === 'break') setBlock(x, y, z, null);
+                else {
                     const bx = x + hit.face.normal.x;
                     const by = y + hit.face.normal.y;
                     const bz = z + hit.face.normal.z;
-                    // Collision Check
                     if(!(Math.abs(bx-camera.position.x)<0.8 && Math.abs(by-camera.position.y+1.5)<1.8 && Math.abs(bz-camera.position.z)<0.8)) {
-                        setBlock(bx, by, bz, selectedBlockId); // Build -> Removes from inv
+                        setBlock(bx, by, bz, selectedBlockId);
                     }
                 }
             }
         }
-
-        document.getElementById('btn-break').addEventListener('touchstart', (e)=>{ e.preventDefault(); interact('break'); });
-        document.getElementById('btn-build').addEventListener('touchstart', (e)=>{ e.preventDefault(); interact('build'); });
         document.getElementById('btn-break').addEventListener('click', ()=>interact('break'));
         document.getElementById('btn-build').addEventListener('click', ()=>interact('build'));
+        document.getElementById('btn-break').addEventListener('touchstart', (e)=>{e.preventDefault(); interact('break')});
+        document.getElementById('btn-build').addEventListener('touchstart', (e)=>{e.preventDefault(); interact('build')});
 
-        // --- 7. PHYSICS ---
-        camera.position.set(0, 8, 0);
         const velocity = new THREE.Vector3();
         
         function animate() {
             requestAnimationFrame(animate);
 
-            // Look
+            // Entities
+            updateEntities();
+
+            // Player Look
             const lookSpeed = 0.04;
             if(input.lL) camera.rotation.y += lookSpeed;
             if(input.lR) camera.rotation.y -= lookSpeed;
             if(input.lU) camera.rotation.x += lookSpeed;
             if(input.lD) camera.rotation.x -= lookSpeed;
-            camera.rotation.x = Math.max(-Math.PI/2 + 0.05, Math.min(Math.PI/2 - 0.05, camera.rotation.x));
+            camera.rotation.x = Math.max(-Math.PI/2+0.1, Math.min(Math.PI/2-0.1, camera.rotation.x));
 
-            // Move
+            // Player Move
             const speed = 0.15;
-            const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion); fwd.y = 0; fwd.normalize();
-            const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion); right.y = 0; right.normalize();
+            const fwd = new THREE.Vector3(0,0,-1).applyQuaternion(camera.quaternion); fwd.y=0; fwd.normalize();
+            const right = new THREE.Vector3(1,0,0).applyQuaternion(camera.quaternion); right.y=0; right.normalize();
             
             if(input.w) camera.position.add(fwd.multiplyScalar(speed));
             if(input.s) camera.position.add(fwd.multiplyScalar(-speed));
             if(input.a) camera.position.add(right.multiplyScalar(-speed));
             if(input.d) camera.position.add(right.multiplyScalar(speed));
 
-            // Gravity
+            // Player Gravity
             velocity.y -= 0.025;
             const nextY = camera.position.y + velocity.y;
             const feetX = Math.round(camera.position.x);
             const feetZ = Math.round(camera.position.z);
-            const feetY = Math.round(nextY - 1.5); 
+            const feetY = Math.round(nextY - 1.5);
 
-            if (worldData.has(`${feetX},${feetY},${feetZ}`)) {
+            if(worldData.has(`${feetX},${feetY},${feetZ}`)) {
                 velocity.y = 0;
                 camera.position.y = feetY + 0.5 + 1.5;
                 if(input.sp) velocity.y = 0.45;
@@ -365,7 +444,7 @@
             renderer.render(scene, camera);
         }
         animate();
-        
+
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
