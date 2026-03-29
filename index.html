@@ -433,13 +433,15 @@
         window.respawn = () => { player.hp = player.maxHp; player.dead = false; player.invuln = 60; updateHearts(); camera.position.set(0, 20, 0); document.getElementById('death-screen').style.display = 'none'; };
         window.resetWorld = () => { if(confirm("Reset World?")) { localStorage.removeItem(SAVE_KEY); location.reload(); } };
         setInterval(saveGame, 5000);
-
+        function terrain(fx,fz){
+            for(let x=fx-12;x<fz+12;x++) for(let z=fz-12;z<fz+12;z++) { const h = Math.floor(Math.sin(x*0.2)*2 + Math.cos(z*0.2)*2); spawnBlockVisual(x,h,z,'grass'); spawnBlockVisual(x,h-1,z,'dirt'); }
+        }
         if(localStorage.getItem(SAVE_KEY)) {
             const s = JSON.parse(localStorage.getItem(SAVE_KEY));
             playerInventory = s.i; player.hp = s.h; gameTime = s.t || 0; camera.position.set(s.p.x, s.p.y, s.p.z);
             s.b.forEach(([k,v]) => { const p=k.split(',').map(Number); spawnBlockVisual(p[0],p[1],p[2],v.id); });
         } else {
-            for(let x=-12;x<12;x++) for(let z=-12;z<12;z++) { const h = Math.floor(Math.sin(x*0.2)*2 + Math.cos(z*0.2)*2); spawnBlockVisual(x,h,z,'grass'); spawnBlockVisual(x,h-1,z,'dirt'); }
+            for(let x=-12;x<12;x++) for(let z=-12;z<12;z++) { const h = Math.floor(Math.sin(x*0.2)*2 + Math.cos(z*0.2)*2); spawnBlockVisual(x,h,z,'grass'); spawnBlockVisual(x,h-1,z,'dirt'); 
             spawnEntity('zombie', 5, 10, 5);
         }
         renderInventory(); updateHearts();
