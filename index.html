@@ -433,15 +433,13 @@
         window.respawn = () => { player.hp = player.maxHp; player.dead = false; player.invuln = 60; updateHearts(); camera.position.set(0, 20, 0); document.getElementById('death-screen').style.display = 'none'; };
         window.resetWorld = () => { if(confirm("Reset World?")) { localStorage.removeItem(SAVE_KEY); location.reload(); } };
         setInterval(saveGame, 5000);
-        function terrain(fx,fz){
-            for(let x=fx-12;x<fz+12;x++) for(let z=fz-12;z<fz+12;z++) { const h = Math.floor(Math.sin(x*0.2)*2 + Math.cos(z*0.2)*2); spawnBlockVisual(x,h,z,'grass'); spawnBlockVisual(x,h-1,z,'dirt'); }
-        }
+
         if(localStorage.getItem(SAVE_KEY)) {
             const s = JSON.parse(localStorage.getItem(SAVE_KEY));
             playerInventory = s.i; player.hp = s.h; gameTime = s.t || 0; camera.position.set(s.p.x, s.p.y, s.p.z);
             s.b.forEach(([k,v]) => { const p=k.split(',').map(Number); spawnBlockVisual(p[0],p[1],p[2],v.id); });
         } else {
-            for(let x=-12;x<12;x++) for(let z=-12;z<12;z++) { const h = Math.floor(Math.sin(x*0.2)*2 + Math.cos(z*0.2)*2); spawnBlockVisual(x,h,z,'grass'); spawnBlockVisual(x,h-1,z,'dirt'); 
+            for(let x=-12;x<12;x++) for(let z=-12;z<12;z++) { const h = Math.floor(Math.sin(x*0.2)*2 + Math.cos(z*0.2)*2); spawnBlockVisual(x,h,z,'grass'); spawnBlockVisual(x,h-1,z,'dirt'); }
             spawnEntity('zombie', 5, 10, 5);
         }
         renderInventory(); updateHearts();
@@ -462,7 +460,7 @@
                 velocity.y -= 0.025; const nextY = camera.position.y + velocity.y; const feetX = Math.round(camera.position.x); const feetZ = Math.round(camera.position.z); const feetY = Math.round(nextY - 1.5);
                 if(worldData.has(`${feetX},${feetY},${feetZ}`)) { velocity.y=0; camera.position.y=feetY+0.5+1.5; velocity.x*=0.8; velocity.z*=0.8; if(input.sp) velocity.y=0.45; } else camera.position.y=nextY;
                 camera.position.x += velocity.x; camera.position.z += velocity.z;
-                if(camera.position.y < -20) { terrain(camera.position.x+12,camera.position.z+12); takeDamage(5); camera.position.set(0,20,0); }
+                if(camera.position.y < -20) { takeDamage(5); camera.position.set(0,20,0); }
             }
             renderer.render(scene, camera);
         }
