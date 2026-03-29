@@ -1,10 +1,471 @@
-<!-- Added Infinite Terrain Chunk Generation System -->
-<script>
-function generateTerrain() {
-    // Code for generating infinite terrain chunks
-    // This function will keep generating chunks as the player moves
-}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>NanoCraft 2.0</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'Courier New', monospace; user-select: none; -webkit-user-select: none; }
+        
+        /* HUD */
+        #hud { position: absolute; top: 10px; left: 10px; color: white; text-shadow: 2px 2px 0 #000; pointer-events: none; z-index: 10; }
+        .hud-row { display: flex; align-items: center; gap: 10px; }
+        #hearts { margin-top: 5px; font-size: 20px; color: #FF3333; text-shadow: 2px 2px 0 #000; }
+        #time-display { font-size: 14px; color: #FFFFAA; margin-top: 2px; }
+        
+        .btn-reset { pointer-events: auto; background: #a00; color: white; border: 2px solid white; font-weight: bold; font-size: 10px; padding: 4px 8px; cursor: pointer; text-transform: uppercase; }
+        
+        /* CLOCK VISUAL */
+        #clock { position: absolute; top: 10px; right: 10px; width: 60px; height: 60px; background: rgba(0,0,0,0.5); border-radius: 50%; border: 2px solid #fff; pointer-events: none; }
+        #clock-face { width: 100%; height: 100%; position: relative; overflow: hidden; border-radius: 50%; }
+        #clock-sun { position: absolute; width: 10px; height: 10px; background: yellow; border-radius: 50%; top: 50%; left: 50%; margin: -5px; }
+        #clock-moon { position: absolute; width: 8px; height: 8px; background: white; border-radius: 50%; top: 50%; left: 50%; margin: -4px; }
+        
+        #loot-feed { position: absolute; top: 60px; right: 10px; width: 200px; display: flex; flex-direction: column; align-items: flex-end; pointer-events: none; z-index: 50; }
+        .loot-msg { background: rgba(0,0,0,0.5); color: #fff; padding: 5px 10px; margin-bottom: 5px; border-radius: 5px; font-size: 12px; animation: fadeOut 3s forwards; }
+        @keyframes fadeOut { 0% { opacity: 1; transform: translateX(0); } 80% { opacity: 1; } 100% { opacity: 0; transform: translateX(20px); } }
 
-// Call the function to start generating terrain
-generateTerrain();
-</script>
+        #death-screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(100, 0, 0, 0.8); z-index: 100; display: none; flex-direction: column; align-items: center; justify-content: center; color: white; pointer-events: auto; }
+        .respawn-btn { padding: 15px 30px; font-size: 18px; background: #ccc; border: 4px solid #fff; cursor: pointer; font-family: inherit; font-weight: bold; }
+        #damage-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: red; opacity: 0; pointer-events: none; transition: opacity 0.1s; z-index: 5; }
+        #crosshair { position: absolute; top: 50%; left: 50%; width: 20px; height: 20px; border: 2px solid white; transform: translate(-50%, -50%); border-radius: 50%; pointer-events: none; z-index: 10; mix-blend-mode: difference; }
+        
+        #inventory { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; background: rgba(0,0,0,0.6); padding: 6px; border-radius: 12px; pointer-events: auto; z-index: 40; }
+        .inv-slot { width: 45px; height: 45px; border: 2px solid #555; border-radius: 8px; cursor: pointer; position: relative; background-size: cover; image-rendering: pixelated; transition: transform 0.1s, background-color 0.1s; background-color: rgba(0,0,0,0.3); }
+        .inv-slot.selected { border-color: #fff; box-shadow: 0 0 8px white; transform: scale(1.15); z-index: 41; }
+        .slot-count { position: absolute; bottom: -2px; right: 2px; color: white; font-size: 12px; font-weight: bold; text-shadow: 1px 1px 0 #000; }
+
+        .control-layer { position: absolute; bottom: 70px; width: 100%; height: 160px; pointer-events: none; z-index: 20; }
+        .d-pad { position: absolute; width: 130px; height: 130px; pointer-events: auto; background: rgba(0,0,0,0.1); border-radius: 50%; }
+        .pad-left { left: 20px; bottom: 10px; }
+        .pad-right { right: 20px; bottom: 10px; }
+        .btn { background: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 8px; color: white; font-weight: bold; display: flex; align-items: center; justify-content: center; position: absolute; cursor: pointer; backdrop-filter: blur(2px); touch-action: manipulation; }
+        .btn:active { background: rgba(255, 255, 255, 0.5); }
+        .btn-u { top: 0; left: 40px; width: 50px; height: 40px; }
+        .btn-d { bottom: 0; left: 40px; width: 50px; height: 40px; }
+        .btn-l { top: 40px; left: 0; width: 40px; height: 50px; }
+        .btn-r { top: 40px; right: 0; width: 40px; height: 50px; }
+        .pad-right .btn { border-color: rgba(255, 215, 0, 0.5); } 
+        .actions { position: absolute; bottom: 150px; right: 20px; display: flex; gap: 15px; pointer-events: auto; }
+        .btn-act { position: relative; width: 55px; height: 55px; border-radius: 50%; font-size: 10px; }
+        .btn-break { background: rgba(255, 50, 50, 0.4); border-color: #ff5555; }
+        .btn-build { background: rgba(50, 255, 100, 0.4); border-color: #55ff55; }
+        .btn-jump { position: absolute; bottom: 150px; left: 20px; width: 65px; height: 65px; border-radius: 50%; background: rgba(255, 200, 0, 0.4); pointer-events: auto; }
+    </style>
+</head>
+<body>
+    <div id="damage-overlay"></div>
+    <div id="loot-feed"></div>
+    
+    <div id="clock"><div id="clock-face"><div id="clock-sun"></div><div id="clock-moon"></div></div></div>
+
+    <div id="hud">
+        <div class="hud-row">
+            <h3>NanoCraft 2.0</h3>
+            <button class="btn-reset" onclick="resetWorld()">Reset</button>
+        </div>
+        <div id="hearts">❤❤❤❤❤❤❤❤❤❤</div>
+        <div id="time-display">12:00 PM</div>
+        <div id="save-status" style="font-size: 10px; color: #ffff00; margin-top:5px;"></div>
+    </div>
+
+    <div id="death-screen">
+        <h1>YOU DIED</h1>
+        <button class="respawn-btn" onclick="respawn()">RESPAWN</button>
+        <br><br>
+        <button class="btn-reset" onclick="resetWorld()">DELETE WORLD</button>
+    </div>
+
+    <div id="crosshair"></div>
+    <div id="inventory"></div>
+
+    <div class="control-layer">
+        <div class="btn btn-jump" id="btn-space">JUMP</div>
+        <div class="d-pad pad-left">
+            <div class="btn btn-u" id="btn-w">W</div>
+            <div class="btn btn-l" id="btn-a">A</div>
+            <div class="btn btn-r" id="btn-d">D</div>
+            <div class="btn btn-d" id="btn-s">S</div>
+        </div>
+        <div class="actions">
+            <div class="btn btn-act btn-break" id="btn-break">ATTACK</div>
+            <div class="btn btn-act btn-build" id="btn-build">USE</div>
+        </div>
+        <div class="d-pad pad-right">
+            <div class="btn btn-u" id="btn-look-u">↑</div>
+            <div class="btn btn-l" id="btn-look-l">←</div>
+            <div class="btn btn-r" id="btn-look-r">→</div>
+            <div class="btn btn-d" id="btn-look-d">↓</div>
+        </div>
+    </div>
+
+    <script type="importmap">
+        { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+
+        // --- CONFIGURATION ---
+        
+        // TIME SETTINGS
+        // 0.0005 was approx 30s per day.
+        // 0.00005 is approx 5.5 minutes per day.
+        const TIME_SPEED = 0.00005; 
+
+        const BLOCK_MANIFEST = [
+            { id: 'grass', color: '#5fab3b', type: 'natural' },
+            { id: 'dirt',  color: '#5D4037', type: 'natural' },
+            { id: 'stone', color: '#757575', type: 'natural' },
+            { id: 'plank', color: '#BC8F8F', type: 'wood' },
+            { id: 'brick', color: '#A93226', type: 'brick' },
+            { id: 'glass', color: '#88CCFF', type: 'glass' },
+            { 
+                id: 'tnt', color: '#FF0000', type: 'tnt',
+                events: { onBreak: [ { action: 'explode', radius: 4 } ] }
+            }
+        ];
+
+        const ITEM_MANIFEST = [
+            { id: 'rotten_flesh', color: '#8B4513', type: 'meat' },
+            { id: 'porkchop', color: '#FFB6C1', type: 'meat' },
+            { id: 'gunpowder', color: '#555555', type: 'gem' },
+            { 
+                id: 'medkit', color: '#FFFFFF', type: 'medkit',
+                events: { onUse: [ { action: 'heal', amount: 5 }, { action: 'consume' } ] }
+            },
+            { id: 'egg_pig', color: '#FFC0CB', spot: '#DB7093', type: 'egg', events: { onUse: [{action:'spawn', entity:'pig'}, {action:'consume'}] } },
+            { id: 'egg_zombie', color: '#2E8B57', spot: '#000000', type: 'egg', events: { onUse: [{action:'spawn', entity:'zombie'}, {action:'consume'}] } },
+            { id: 'egg_creeper', color: '#00FF00', spot: '#000000', type: 'egg', events: { onUse: [{action:'spawn', entity:'creeper'}, {action:'consume'}] } }
+        ];
+
+        const ENTITY_MANIFEST = {
+            'zombie': { 
+                color: '#2E8B57', speed: 0.04, hp: 20, damage: 2, width: 0.6, height: 1.8, ai: 'chase',
+                burns: true, drops: [{ id: 'rotten_flesh', chance: 1.0 }, { id: 'tnt', chance: 0.1 }],
+                spawn: { timeRange: [[0.75, 1.0], [0, 0.25]], maxLightLevel: 8 }
+            },
+            'pig': { 
+                color: '#FFC0CB', speed: 0.02, hp: 10, damage: 0, width: 0.8, height: 0.8, ai: 'wander',
+                burns: false, drops: [{ id: 'porkchop', chance: 1.0 }],
+                spawn: { timeRange: [[0.25, 0.75]], maxLightLevel: 15 }
+            },
+            'enderman': { 
+                color: '#000000', speed: 0.1, hp: 40, damage: 4, width: 0.5, height: 2.8, ai: 'wander',
+                burns: false, drops: [{ id: 'ender_pearl', chance: 1.0 }],
+                spawn: { timeRange: [[0.75, 1.0], [0, 0.25]], maxLightLevel: 15 }
+            },
+            'creeper': {
+                color: '#00FF00', speed: 0.03, hp: 15, damage: 0, width: 0.6, height: 1.6, ai: 'chase',
+                burns: false, drops: [{ id: 'gunpowder', chance: 1.0 }],
+                events: { onDeath: [{ action: 'explode', radius: 5 }] },
+                spawn: { timeRange: [[0.75, 1.0], [0, 0.25]], maxLightLevel: 8 }
+            }
+        };
+
+        // --- TEXTURE GENERATION ---
+        function createTexture(spec) {
+            const c = document.createElement('canvas'); c.width = 64; c.height = 64; const ctx = c.getContext('2d');
+            const color = spec.color; const type = spec.type;
+            if(type === 'egg') {
+                ctx.beginPath(); ctx.ellipse(32, 32, 20, 28, 0, 0, 2*Math.PI);
+                ctx.fillStyle = color; ctx.fill(); ctx.stroke();
+                ctx.fillStyle = spec.spot; for(let i=0;i<8;i++) { ctx.beginPath(); ctx.arc(20+Math.random()*24, 20+Math.random()*24, 3, 0, 2*Math.PI); ctx.fill(); }
+            } 
+            else if(type === 'medkit') { ctx.fillStyle = '#FFF'; ctx.fillRect(10,15,44,34); ctx.strokeRect(10,15,44,34); ctx.fillStyle = '#F00'; ctx.fillRect(28, 20, 8, 24); ctx.fillRect(20, 28, 24, 8); }
+            else if(type === 'tnt') { ctx.fillStyle = '#D22'; ctx.fillRect(0,0,64,64); ctx.fillStyle = '#FFF'; ctx.fillRect(0, 20, 64, 24); ctx.fillStyle = '#000'; ctx.font = "bold 16px Arial"; ctx.fillText("TNT", 16, 38); }
+            else if(type === 'meat' || type === 'gem') { ctx.fillStyle = color; ctx.beginPath(); ctx.arc(32, 32, 20, 0, 2*Math.PI); ctx.fill(); }
+            else { ctx.fillStyle = color; ctx.fillRect(0,0,64,64); ctx.fillStyle = 'rgba(0,0,0,0.1)'; for(let i=0;i<100;i++) ctx.fillRect(Math.random()*64, Math.random()*64, 2, 2); }
+            const tex = new THREE.CanvasTexture(c); tex.magFilter = THREE.NearestFilter; return { tex, url: c.toDataURL() };
+        }
+
+        function createEntityFace(type) {
+            const c = document.createElement('canvas'); c.width=64; c.height=64; const ctx=c.getContext('2d');
+            if(type==='zombie'){ ctx.fillStyle='#2E8B57';ctx.fillRect(0,0,64,64); ctx.fillStyle='#111';ctx.fillRect(12,20,10,10);ctx.fillRect(42,20,10,10); }
+            else if(type==='pig'){ ctx.fillStyle='#FFC0CB';ctx.fillRect(0,0,64,64);ctx.fillStyle='#FFF';ctx.fillRect(8,20,12,12);ctx.fillRect(44,20,12,12);ctx.fillStyle='#000';ctx.fillRect(12,24,4,4);ctx.fillRect(48,24,4,4);ctx.fillStyle='#DB7093';ctx.fillRect(20,36,24,14); }
+            else if(type==='creeper'){ ctx.fillStyle='#00AA00';ctx.fillRect(0,0,64,64);ctx.fillStyle='#000';ctx.fillRect(12,16,10,10);ctx.fillRect(42,16,10,10);ctx.fillRect(26,26,12,12);ctx.fillRect(20,38,24,10);ctx.fillRect(16,48,8,8);ctx.fillRect(40,48,8,8); }
+            return new THREE.CanvasTexture(c);
+        }
+
+        // --- ENGINE SETUP ---
+        const WORLD_SIZE = 72; const CHUNK_CAPACITY = 4000;
+        const scene = new THREE.Scene(); scene.background = new THREE.Color(0x87CEEB); scene.fog = new THREE.Fog(0x87CEEB, 10, 60);
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000); camera.rotation.order = 'YXZ';
+        const renderer = new THREE.WebGLRenderer({ antialias: false, alpha: true }); renderer.setSize(window.innerWidth, window.innerHeight); document.body.appendChild(renderer.domElement);
+
+        // DAY/NIGHT SYSTEM
+        const sunLight = new THREE.DirectionalLight(0xffffff, 1.0); sunLight.position.set(50, 100, 50); scene.add(sunLight);
+        const ambient = new THREE.AmbientLight(0xffffff, 0.3); scene.add(ambient);
+        const skyGroup = new THREE.Group(); scene.add(skyGroup);
+        const sunMesh = new THREE.Mesh(new THREE.SphereGeometry(5, 16, 16), new THREE.MeshBasicMaterial({color: 0xFFFF00})); sunMesh.position.set(100, 0, 0); skyGroup.add(sunMesh);
+        const moonMesh = new THREE.Mesh(new THREE.SphereGeometry(4, 16, 16), new THREE.MeshBasicMaterial({color: 0xFFFFFF})); moonMesh.position.set(-100, 0, 0); skyGroup.add(moonMesh);
+
+        let gameTime = 0; // 0.0 to 1.0
+        
+        function updateSky() {
+            gameTime += TIME_SPEED; // Adjusted Speed
+            if(gameTime > 1) gameTime = 0;
+
+            skyGroup.rotation.z = gameTime * Math.PI * 2;
+            const sunHeight = Math.sin((gameTime + 0.25) * Math.PI * 2);
+            sunLight.position.copy(sunMesh.getWorldPosition(new THREE.Vector3()));
+            sunLight.intensity = Math.max(0, sunHeight);
+            ambient.intensity = Math.max(0.1, sunHeight * 0.5 + 0.1);
+            const hue = Math.max(0, sunHeight);
+            scene.background.setRGB(0.53 * hue, 0.81 * hue, 0.92 * hue);
+            scene.fog.color.copy(scene.background);
+
+            const angle = gameTime * 360;
+            document.getElementById('clock-sun').style.transform = `rotate(${angle}deg) translate(25px) rotate(-${angle}deg)`;
+            document.getElementById('clock-moon').style.transform = `rotate(${angle+180}deg) translate(25px) rotate(-${angle+180}deg)`;
+
+            // Digital Clock
+            const hours = Math.floor(gameTime * 24);
+            const mins = Math.floor((gameTime * 24 * 60) % 60);
+            const ampm = hours >= 12 ? 'PM' : 'AM';
+            const h12 = hours % 12 || 12;
+            document.getElementById('time-display').innerText = `${h12}:${mins.toString().padStart(2,'0')} ${ampm}`;
+        }
+
+        // --- ASSETS ---
+        const blockMeshes = {}; const itemMeta = {}; const activePools = {}; const blockEvents = {}; const dummy = new THREE.Object3D();
+        BLOCK_MANIFEST.forEach(b => {
+            const { tex, url } = createTexture(b);
+            const mat = new THREE.MeshStandardMaterial({ map: tex, transparent: b.type==='glass', opacity: b.type==='glass'?0.6:1 });
+            const mesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1), mat, CHUNK_CAPACITY);
+            scene.add(mesh);
+            blockMeshes[b.id] = mesh; itemMeta[b.id] = { url, type: 'block' }; activePools[b.id] = 0;
+            if(b.events) blockEvents[b.id] = b.events;
+        });
+        ITEM_MANIFEST.forEach(i => {
+            const { url } = createTexture(i);
+            itemMeta[i.id] = { url, type: 'item', events: i.events };
+        });
+
+        // --- STATE & EVENTS ---
+        const worldData = new Map();
+        const player = { hp: 20, maxHp: 20, invuln: 0, dead: false };
+        let playerInventory = { 'brick': 10, 'tnt': 5, 'medkit': 3, 'egg_creeper': 2 };
+
+        function triggerEvent(eventList, context) {
+            if(!eventList) return;
+            eventList.forEach(e => {
+                if(e.action === 'explode') {
+                    const r = e.radius;
+                    for(let x = -r; x <= r; x++) for(let y = -r; y <= r; y++) for(let z = -r; z <= r; z++) {
+                        if(x*x + y*y + z*z <= r*r) removeBlock(context.x+x, context.y+y, context.z+z, false);
+                    }
+                    entities.forEach(ent => {
+                        if(ent.mesh.position.distanceTo(new THREE.Vector3(context.x, context.y, context.z)) < r) {
+                            ent.hp = 0; ent.hurt = 10;
+                        }
+                    });
+                    if(camera.position.distanceTo(new THREE.Vector3(context.x, context.y, context.z)) < r) takeDamage(10);
+                }
+                else if(e.action === 'heal') { player.hp = Math.min(player.hp + e.amount, player.maxHp); updateHearts(); showLoot("Healed!"); }
+                else if(e.action === 'spawn') { spawnEntity(e.entity, context.x, context.y+1, context.z); }
+                else if(e.action === 'consume') { modifyInventory(selectedItemId, -1); }
+            });
+        }
+
+        // --- INVENTORY UI ---
+        const invEl = document.getElementById('inventory'); let selectedItemId = null;
+        function showLoot(text) { const feed = document.getElementById('loot-feed'); const msg = document.createElement('div'); msg.className = 'loot-msg'; msg.innerText = text; feed.appendChild(msg); setTimeout(()=>msg.remove(), 3000); }
+        function renderInventory() {
+            invEl.innerHTML = ''; const items = Object.keys(playerInventory);
+            if(items.length === 0) { selectedItemId = null; return; }
+            if(!playerInventory[selectedItemId]) selectedItemId = items[0];
+            items.forEach(id => {
+                if(!itemMeta[id]) return;
+                const slot = document.createElement('div'); slot.className = 'inv-slot';
+                if(id === selectedItemId) slot.classList.add('selected');
+                slot.style.backgroundImage = `url(${itemMeta[id].url})`;
+                slot.innerHTML = `<div class="slot-count">${playerInventory[id]}</div>`;
+                slot.onclick = () => { selectedItemId = id; renderInventory(); };
+                invEl.appendChild(slot);
+            });
+        }
+        function modifyInventory(id, amt) {
+            if(!id) return; if(!playerInventory[id]) playerInventory[id] = 0;
+            playerInventory[id] += amt; if(playerInventory[id] <= 0) delete playerInventory[id];
+            if(amt > 0) showLoot(`+${amt} ${id.toUpperCase()}`); renderInventory();
+        }
+        function updateHearts() { const hearts = Math.ceil(player.hp / 2); let str = ''; for(let i=0; i<10; i++) str += i < hearts ? '❤' : '♡'; document.getElementById('hearts').innerText = str; }
+        function takeDamage(amount) {
+            if(player.dead || player.invuln > 0) return;
+            player.hp -= amount; player.invuln = 30; updateHearts();
+            document.getElementById('damage-overlay').style.opacity = 0.5; setTimeout(() => document.getElementById('damage-overlay').style.opacity = 0, 100);
+            if(player.hp <= 0) { player.dead = true; player.hp = 0; document.getElementById('death-screen').style.display = 'flex'; document.exitPointerLock(); }
+        }
+
+        window.respawn = () => { player.hp = player.maxHp; player.dead = false; player.invuln = 60; updateHearts(); camera.position.set(0, 20, 0); document.getElementById('death-screen').style.display = 'none'; };
+        window.resetWorld = () => { if(confirm("Reset World?")) { localStorage.removeItem('nc_20'); location.reload(); } };
+
+        // --- WORLD LOGIC ---
+        function spawnBlockVisual(x, y, z, id) {
+            const mesh = blockMeshes[id]; const idx = activePools[id]++; if(idx >= CHUNK_CAPACITY) return;
+            dummy.position.set(x,y,z); dummy.scale.set(1,1,1); dummy.updateMatrix();
+            mesh.setMatrixAt(idx, dummy.matrix); mesh.instanceMatrix.needsUpdate = true;
+            worldData.set(`${x},${y},${z}`, { id, idx });
+        }
+        function removeBlock(x, y, z, drops = true) {
+            const key = `${x},${y},${z}`;
+            if(worldData.has(key)) {
+                const prev = worldData.get(key); const pm = blockMeshes[prev.id];
+                const mat = new THREE.Matrix4(); pm.getMatrixAt(prev.idx, mat); mat.elements[0]=0; pm.setMatrixAt(prev.idx, mat); pm.instanceMatrix.needsUpdate=true;
+                worldData.delete(key);
+                if(drops) modifyInventory(prev.id, 1);
+                if(blockEvents[prev.id] && blockEvents[prev.id].onBreak) triggerEvent(blockEvents[prev.id].onBreak, { x, y, z });
+            }
+        }
+
+        // --- ENTITIES ---
+        let entities = []; const entGeo = new THREE.BoxGeometry(1,1,1);
+        
+        function canSpawn(type, x, y, z) {
+            const data = ENTITY_MANIFEST[type];
+            if(!data.spawn) return true; // No spawn rules = can always spawn
+            
+            const spawnRules = data.spawn;
+            
+            // Check time range
+            let timeOk = false;
+            for(let range of spawnRules.timeRange) {
+                const [start, end] = range;
+                if(start < end) {
+                    if(gameTime >= start && gameTime < end) timeOk = true;
+                } else {
+                    // Wraps around midnight
+                    if(gameTime >= start || gameTime < end) timeOk = true;
+                }
+            }
+            if(!timeOk) return false;
+            
+            // Check light level (simple: check if block above blocks light)
+            if(spawnRules.maxLightLevel !== undefined) {
+                const bx = Math.round(x), by = Math.round(y), bz = Math.round(z);
+                const hasBlockAbove = worldData.has(`${bx},${by+1},${bz}`);
+                // If no block above and maxLightLevel is low, entity needs darkness - don't spawn
+                if(!hasBlockAbove && spawnRules.maxLightLevel < 8) return false;
+            }
+            
+            return true;
+        }
+
+        function spawnEntity(type, x, y, z) {
+            if(!canSpawn(type, x, y, z)) return false;
+            const data = ENTITY_MANIFEST[type]; const bodyMat = new THREE.MeshStandardMaterial({ color: data.color });
+            const faceMat = new THREE.MeshStandardMaterial({ map: createEntityFace(type) });
+            const mesh = new THREE.Mesh(entGeo, [bodyMat,bodyMat,bodyMat,bodyMat,faceMat,bodyMat]);
+            mesh.scale.set(data.width, data.height, data.width); mesh.position.set(x, y, z); scene.add(mesh);
+            entities.push({ mesh, type, hp: data.hp, data, vel: new THREE.Vector3(), hurt: 0 });
+            return true;
+        }
+
+        function updateEntities() {
+            // Is it daytime? (0.25 to 0.75 is roughly day)
+            // Actually sin wave matches light intensity.
+            const isDay = gameTime > 0.75 || gameTime < 0.25; 
+            
+            for (let i = entities.length - 1; i >= 0; i--) {
+                const e = entities[i];
+                if(e.hurt > 0) { e.hurt--; e.mesh.material.forEach(m=>m.color.setHex(0xFF0000)); } 
+                else { e.mesh.material.forEach(m=>m.color.setHex(0xFFFFFF)); e.mesh.material[0].color.set(e.data.color); }
+
+                if(isDay && e.data.burns && !worldData.has(`${Math.round(e.mesh.position.x)},${Math.round(e.mesh.position.y+2)},${Math.round(e.mesh.position.z)}`)) {
+                    e.hurt = 10; e.hp -= 0.05; // Slower burn
+                    if(Math.random() > 0.8) e.mesh.material.forEach(m=>m.color.setHex(0xFFAA00));
+                }
+                
+                if(e.hp <= 0) {
+                    if(e.data.drops) e.data.drops.forEach(d => { if(Math.random()<d.chance) modifyInventory(d.id, 1); });
+                    if(e.data.events && e.data.events.onDeath) triggerEvent(e.data.events.onDeath, { x:e.mesh.position.x, y:e.mesh.position.y, z:e.mesh.position.z });
+                    scene.remove(e.mesh); entities.splice(i, 1); continue;
+                }
+
+                e.vel.y -= 0.02; const nextY = e.mesh.position.y + e.vel.y; const feetY = Math.round(nextY - e.data.height/2);
+                const bx=Math.round(e.mesh.position.x), bz=Math.round(e.mesh.position.z);
+                if(worldData.has(`${bx},${feetY},${bz}`)) { e.vel.y=0; e.mesh.position.y=feetY+0.5+e.data.height/2; e.vel.x*=0.8; e.vel.z*=0.8; } else e.mesh.position.y=nextY;
+
+                const dist = e.mesh.position.distanceTo(camera.position);
+                if(e.data.ai === 'chase' && dist < 20) {
+                    const dx = camera.position.x - e.mesh.position.x; const dz = camera.position.z - e.mesh.position.z;
+                    e.vel.x += (dx/dist)*0.002; e.vel.z += (dz/dist)*0.002; e.mesh.rotation.y = Math.atan2(dx, dz);
+                    if(dist < 1.5) { takeDamage(e.data.damage); velocity.x += (dx/dist)*0.3; velocity.z += (dz/dist)*0.3; }
+                } else if(Math.random() < 0.02) { e.vel.x += (Math.random()-0.5)*0.1; e.vel.z += (Math.random()-0.5)*0.1; }
+                e.mesh.position.x += e.vel.x; e.mesh.position.z += e.vel.z;
+                if(e.mesh.position.y < -20) { scene.remove(e.mesh); entities.splice(i, 1); }
+            }
+        }
+
+        // --- INTERACTION ---
+        const raycaster = new THREE.Raycaster(); const center = new THREE.Vector2(0,0);
+        function interact(mode) {
+            if(player.dead) return;
+            raycaster.setFromCamera(center, camera);
+            const entHit = raycaster.intersectObjects(entities.map(e => e.mesh));
+            if(entHit.length > 0 && entHit[0].distance < 4 && mode === 'break') {
+                const target = entities.find(e => e.mesh === entHit[0].object);
+                if(target) { target.hp -= 4; target.hurt = 5; target.vel.y += 0.2; target.vel.x += (target.mesh.position.x-camera.position.x)*0.5; target.vel.z += (target.mesh.position.z-camera.position.z)*0.5; }
+                return;
+            }
+            const intersects = raycaster.intersectObjects(Object.values(blockMeshes));
+            if(intersects.length > 0 && intersects[0].distance < 6) {
+                const hit = intersects[0]; const x = Math.round(hit.point.x - hit.face.normal.x*0.1); const y = Math.round(hit.point.y - hit.face.normal.y*0.1); const z = Math.round(hit.point.z - hit.face.normal.z*0.1);
+                if(mode === 'break') removeBlock(x, y, z);
+                else if (mode === 'build' && selectedItemId) {
+                     const meta = itemMeta[selectedItemId];
+                     if(meta.events && meta.events.onUse) { const bx = x + hit.face.normal.x; const by = y + hit.face.normal.y; const bz = z + hit.face.normal.z; triggerEvent(meta.events.onUse, { x: bx, y: by, z: bz }); }
+                     else if (meta.type === 'block') { const bx = x + hit.face.normal.x; const by = y + hit.face.normal.y; const bz = z + hit.face.normal.z; if(!(Math.abs(bx-camera.position.x)<0.8 && Math.abs(by-camera.position.y+1.5)<1.8 && Math.abs(bz-camera.position.z)<0.8)) { spawnBlockVisual(bx, by, bz, selectedItemId); modifyInventory(selectedItemId, -1); } }
+                }
+            } else if (mode === 'build' && selectedItemId) { const meta = itemMeta[selectedItemId]; if(meta && meta.events && meta.events.onUse) triggerEvent(meta.events.onUse, { x:0, y:0, z:0 }); }
+        }
+
+        const input = { w:0, a:0, s:0, d:0, sp:0, lU:0, lD:0, lL:0, lR:0 };
+        const bind = (id, k) => { const el = document.getElementById(id); const on = (e)=>{e.preventDefault(); input[k]=1; el.style.background='rgba(255,255,255,0.5)';}; const off = (e)=>{e.preventDefault(); input[k]=0; el.style.background='';}; el.addEventListener('touchstart', on); el.addEventListener('touchend', off); el.addEventListener('mousedown', on); el.addEventListener('mouseup', off); };
+        bind('btn-w','w'); bind('btn-s','s'); bind('btn-a','a'); bind('btn-d','d'); bind('btn-space','sp'); bind('btn-look-u','lU'); bind('btn-look-d','lD'); bind('btn-look-l','lL'); bind('btn-look-r','lR');
+        document.getElementById('btn-break').addEventListener('click', ()=>interact('break')); document.getElementById('btn-build').addEventListener('click', ()=>interact('build'));
+        document.getElementById('btn-break').addEventListener('touchstart', (e)=>{e.preventDefault(); interact('break')}); document.getElementById('btn-build').addEventListener('touchstart', (e)=>{e.preventDefault(); interact('build')});
+
+        // --- SAVE/LOAD ---
+        const SAVE_KEY = 'nc_20';
+        function saveGame() { if(!player.dead) { const s={b:Array.from(worldData),i:playerInventory,h:player.hp,t:gameTime,p:{x:camera.position.x,y:camera.position.y,z:camera.position.z}}; localStorage.setItem(SAVE_KEY,JSON.stringify(s)); document.getElementById('save-status').innerText="Saved"; setTimeout(()=>document.getElementById('save-status').innerText="",1000);}}
+        window.respawn = () => { player.hp = player.maxHp; player.dead = false; player.invuln = 60; updateHearts(); camera.position.set(0, 20, 0); document.getElementById('death-screen').style.display = 'none'; };
+        window.resetWorld = () => { if(confirm("Reset World?")) { localStorage.removeItem(SAVE_KEY); location.reload(); } };
+        setInterval(saveGame, 5000);
+
+        if(localStorage.getItem(SAVE_KEY)) {
+            const s = JSON.parse(localStorage.getItem(SAVE_KEY));
+            playerInventory = s.i; player.hp = s.h; gameTime = s.t || 0; camera.position.set(s.p.x, s.p.y, s.p.z);
+            s.b.forEach(([k,v]) => { const p=k.split(',').map(Number); spawnBlockVisual(p[0],p[1],p[2],v.id); });
+        } else {
+            for(let x=-12;x<12;x++) for(let z=-12;z<12;z++) { const h = Math.floor(Math.sin(x*0.2)*2 + Math.cos(z*0.2)*2); spawnBlockVisual(x,h,z,'grass'); spawnBlockVisual(x,h-1,z,'dirt'); }
+            spawnEntity('zombie', 5, 10, 5);
+        }
+        renderInventory(); updateHearts();
+
+        const velocity = new THREE.Vector3();
+        function animate() {
+            requestAnimationFrame(animate);
+            updateSky();
+            if(!player.dead) {
+                if(player.invuln > 0) player.invuln--;
+                updateEntities();
+                if(input.lL) camera.rotation.y += 0.04; if(input.lR) camera.rotation.y -= 0.04; if(input.lU) camera.rotation.x += 0.04; if(input.lD) camera.rotation.x -= 0.04;
+                camera.rotation.x = Math.max(-1.5, Math.min(1.5, camera.rotation.x));
+                const speed = 0.15; const fwd = new THREE.Vector3(0,0,-1).applyQuaternion(camera.quaternion); fwd.y=0; fwd.normalize();
+                const right = new THREE.Vector3(1,0,0).applyQuaternion(camera.quaternion); right.y=0; right.normalize();
+                if(input.w) camera.position.add(fwd.multiplyScalar(speed)); if(input.s) camera.position.add(fwd.multiplyScalar(-speed));
+                if(input.a) camera.position.add(right.multiplyScalar(-speed)); if(input.d) camera.position.add(right.multiplyScalar(speed));
+                velocity.y -= 0.025; const nextY = camera.position.y + velocity.y; const feetX = Math.round(camera.position.x); const feetZ = Math.round(camera.position.z); const feetY = Math.round(nextY - 1.5);
+                if(worldData.has(`${feetX},${feetY},${feetZ}`)) { velocity.y=0; camera.position.y=feetY+0.5+1.5; velocity.x*=0.8; velocity.z*=0.8; if(input.sp) velocity.y=0.45; } else camera.position.y=nextY;
+                camera.position.x += velocity.x; camera.position.z += velocity.z;
+                if(camera.position.y < -20) { takeDamage(5); camera.position.set(0,20,0); }
+            }
+            renderer.render(scene, camera);
+        }
+        animate();
+        window.addEventListener('resize', () => { camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); });
+    </script>
+</body>
+</html>
